@@ -429,6 +429,10 @@ CATBOOST_API const char* GetModelInfoValue(ModelCalcerHandle* modelHandle, const
 CATBOOST_API bool GetModelUsedFeaturesNames(ModelCalcerHandle* modelHandle, char*** featureNames, size_t* featureCount);
 
 
+EXPORT char* GetModelNumericFeatures(ModelCalcerHandle* modelHandle, char* buffer, size_t size);
+
+EXPORT char* GetModelCategoricalFeatures(ModelCalcerHandle* modelHandle, char* buffer, size_t size);
+
 #if defined(__cplusplus)
 }
 #endif

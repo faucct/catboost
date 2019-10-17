@@ -404,6 +404,33 @@ public:
     }
 
 private:
+    std::vector<std::string> GetFeatures(char* (*get_features)(ModelCalcerHandle*, char*, size_t)) const {
+        std::vector<char> buffer(10000, '\0');
+        char* result = nullptr;
+        while (!(result = get_features(CalcerHolder.get(), buffer.data(), buffer.size()))) {
+            buffer.resize(buffer.size() * 2);
+        }
+
+        std::vector<std::string> names;
+        const char* current = buffer.data();
+        while (current != result) {
+            names.emplace_back(current);
+            current += names.back().size() + 1;
+        }
+
+        return names;
+    }
+
+public:
+    std::vector<std::string> GetNumericFeatures() const {
+        return GetFeatures(GetModelNumericFeatures);
+    }
+
+    std::vector<std::string> GetCategoricalFeatures() const {
+        return GetFeatures(GetModelCategoricalFeatures);
+    }
+
+private:
     void InitProps() {
         DimensionsCount = GetDimensionsCount(CalcerHolder.get());
     }

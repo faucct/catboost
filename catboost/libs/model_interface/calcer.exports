@@ -47,3 +47,5 @@ C CheckModelMetadataHasKey
 C GetModelInfoValueSize
 C GetModelInfoValue
 C GetModelUsedFeaturesNames
+C GetModelNumericFeatures
+C GetModelCategoricalFeatures

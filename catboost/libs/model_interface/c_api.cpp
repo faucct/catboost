@@ -11,6 +11,7 @@
 #include <util/string/cast.h>
 #include <util/stream/file.h>
 #include <util/string/builder.h>
+#include <util/string/cast.h>
 
 struct TModelHandleContent {
     THolder<TFullModel> FullModel;
@@ -25,6 +26,28 @@ struct TModelHandleContent {
 struct TErrorMessageHolder {
     TString Message;
 };
+
+// See GetModelUsedFeaturesNames
+template <typename T>
+char* getAllFeatureNames(T&& features, char* buffer, size_t size) {
+    const char* end = buffer + size;
+    for (auto&& feature : features) {
+        TString feature_name = feature.FeatureId.empty() ? ToString(feature.Position.FlatIndex) : feature.FeatureId;
+        for (char c : feature_name) {
+            if (buffer != end) {
+                *buffer++ = c;
+            } else {
+                return nullptr;
+            }
+        }
+        if (buffer != end) {
+            *buffer++ = '\0';
+        } else {
+            return nullptr;
+        }
+    }
+    return buffer;
+}
 
 class TFeaturesDataWrapper {
 public:
@@ -216,7 +239,7 @@ CATBOOST_API void AddTextFeatures(DataWrapperHandle* dataWrapperHandle, const ch
 }
 
 CATBOOST_API void AddEmbeddingFeatures(
-    DataWrapperHandle* dataWrapperHandle, 
+    DataWrapperHandle* dataWrapperHandle,
     const float*** embeddingFeatures,
     size_t* embeddingDimensions,
     size_t embeddingFeaturesSize
@@ -407,17 +430,17 @@ CATBOOST_API bool CalcModelPredictionTextAndEmbeddings(
             }
             for (size_t embeddingFeatureIdx = 0; embeddingFeatureIdx < embeddingFeaturesSize; ++embeddingFeatureIdx) {
                 embeddingFeaturesVecData[i][embeddingFeatureIdx] = TConstArrayRef<float>(
-                    embeddingFeatures[i][embeddingFeatureIdx], 
+                    embeddingFeatures[i][embeddingFeatureIdx],
                     embeddingDimensions[embeddingFeatureIdx]
                 );
             }
             embeddingFeaturesVec[i] = embeddingFeaturesVecData[i];
         }
         FULL_MODEL_PTR(modelHandle)->Calc(
-            floatFeaturesVec, 
-            catFeaturesVec, 
-            textFeaturesVec, 
-            embeddingFeaturesVec, 
+            floatFeaturesVec,
+            catFeaturesVec,
+            textFeaturesVec,
+            embeddingFeaturesVec,
             TArrayRef<double>(result, resultSize)
         );
     } catch (...) {
@@ -526,7 +549,7 @@ CATBOOST_API bool CalcModelPredictionWithHashedCatFeaturesAndTextAndEmbeddingFea
             }
             for (size_t embeddingFeatureIdx = 0; embeddingFeatureIdx < embeddingFeaturesSize; ++embeddingFeatureIdx) {
                 embeddingFeaturesVecData[i][embeddingFeatureIdx] = TConstArrayRef<float>(
-                    embeddingFeatures[i][embeddingFeatureIdx], 
+                    embeddingFeatures[i][embeddingFeatureIdx],
                     embeddingDimensions[embeddingFeatureIdx]
                 );
             }
@@ -837,6 +860,14 @@ CATBOOST_API bool GetModelUsedFeaturesNames(ModelCalcerHandle* modelHandle, char
     }
 
     return true;
+}
+
+CATBOOST_API char* GetModelNumericFeatures(ModelCalcerHandle* modelHandle, char* buffer, size_t size) {
+    return getAllFeatureNames(FULL_MODEL_PTR(modelHandle)->ObliviousTrees->FloatFeatures, buffer, size);
+}
+
+CATBOOST_API char* GetModelCategoricalFeatures(ModelCalcerHandle* modelHandle, char* buffer, size_t size) {
+    return getAllFeatureNames(FULL_MODEL_PTR(modelHandle)->ObliviousTrees->CatFeatures, buffer, size);
 }
 
 
