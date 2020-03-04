@@ -27,6 +27,20 @@ struct TErrorMessageHolder {
     TString Message;
 };
 
+
+template <typename T>
+size_t getAllFeaturePositions(T&& features, int* buffer, size_t size) {
+    const int* end = buffer + size;
+    for (auto&& feature : features) {
+        if (buffer == end) {
+            return -1;
+        }
+        *buffer++ = feature.Position.Index;
+    }
+
+    return features.size();
+}
+
 // See GetModelUsedFeaturesNames
 template <typename T>
 char* getAllFeatureNames(T&& features, char* buffer, size_t size) {
@@ -862,12 +876,20 @@ CATBOOST_API bool GetModelUsedFeaturesNames(ModelCalcerHandle* modelHandle, char
     return true;
 }
 
-CATBOOST_API char* GetModelNumericFeatures(ModelCalcerHandle* modelHandle, char* buffer, size_t size) {
-    return getAllFeatureNames(FULL_MODEL_PTR(modelHandle)->ObliviousTrees->FloatFeatures, buffer, size);
+CATBOOST_API char* GetModelNumericFeatureNames(ModelCalcerHandle* modelHandle, char* buffer, size_t size) {
+    return getAllFeatureNames(FULL_MODEL_PTR(modelHandle)->ModelTrees->GetFloatFeatures(), buffer, size);
 }
 
-CATBOOST_API char* GetModelCategoricalFeatures(ModelCalcerHandle* modelHandle, char* buffer, size_t size) {
-    return getAllFeatureNames(FULL_MODEL_PTR(modelHandle)->ObliviousTrees->CatFeatures, buffer, size);
+CATBOOST_API char* GetModelCategoricalFeatureNames(ModelCalcerHandle* modelHandle, char* buffer, size_t size) {
+    return getAllFeatureNames(FULL_MODEL_PTR(modelHandle)->ModelTrees->GetCatFeatures(), buffer, size);
+}
+
+CATBOOST_API size_t GetModelNumericFeaturePositions(ModelCalcerHandle* modelHandle, int* buffer, size_t size) {
+    return getAllFeaturePositions(FULL_MODEL_PTR(modelHandle)->ModelTrees->GetFloatFeatures(), buffer, size);
+}
+
+CATBOOST_API size_t GetModelCategoricalFeaturePositions(ModelCalcerHandle* modelHandle, int* buffer, size_t size) {
+    return getAllFeaturePositions(FULL_MODEL_PTR(modelHandle)->ModelTrees->GetCatFeatures(), buffer, size);
 }
 
 
