@@ -403,42 +403,42 @@ public:
         return result;
     }
 
+    struct Feature {
+        std::string name;
+        int position;
+    };
+
 private:
     std::vector<Feature> GetFeatures(char* (*get_feature_names)(ModelCalcerHandle*, char*, size_t),
-        size_t (*get_feature_positions)(ModelCalcerHandle*, char*, size_t)) const {
+        size_t (*get_feature_positions)(ModelCalcerHandle*, int*, size_t)) const {
         std::vector<char> buffer(10000, '\0');
-        char* result = nullptr;
-        while (!(result = get_features(CalcerHolder.get(), buffer.data(), buffer.size()))) {
+        char* end = nullptr;
+        while (!(end = get_feature_names(CalcerHolder.get(), buffer.data(), buffer.size()))) {
             buffer.resize(buffer.size() * 2);
         }
 
         std::vector<std::string> names;
         const char* current = buffer.data();
-        while (current != result) {
+        while (current != end) {
             names.emplace_back(current);
             current += names.back().size() + 1;
         }
 
         std::vector<int> positions(names.size());
         if (get_feature_positions(CalcerHolder.get(), positions.data(), positions.size()) != positions.size()) {
-            throw std::runtime_error("feature names size differs from feature positions size")
+            throw std::runtime_error("feature names size differs from feature positions size");
         }
 
-        vector <Feature> result(names.size());
+        std::vector <Feature> result(names.size());
         for (size_t i = 0; i < names.size(); ++i) {
             result[i].name = names[i];
             result[i].position = positions[i];
         }
 
-        return names;
+        return result;
     }
 
-public:
-    struct Feature {
-        std::string name;
-        int position;
-    };
-
+ public:
     std::vector<Feature> GetNumericFeatures() const {
         return GetFeatures(GetModelNumericFeatureNames, GetModelNumericFeaturePositions);
     }
