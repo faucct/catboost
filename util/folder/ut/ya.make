@@ -1,6 +1,7 @@
 UNITTEST_FOR(util)
 
 
+SUBSCRIBER(g:util-subscribers)
 
 SRCS(
     folder/dirut_ut.cpp
@@ -9,6 +10,10 @@ SRCS(
     folder/iterator_ut.cpp
     folder/path_ut.cpp
     folder/pathsplit_ut.cpp
+)
+
+PEERDIR(
+    library/cpp/threading/future
 )
 
 INCLUDE(${ARCADIA_ROOT}/util/tests/ya_util_tests.inc)

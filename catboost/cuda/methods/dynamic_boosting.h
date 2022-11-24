@@ -255,7 +255,7 @@ namespace NCatboostCuda {
             TMetricCalcer<TObjective> metricCalcer(target.GetTarget(estimationPermutation), LocalExecutor);
             THolder<TMetricCalcer<TObjective>> testMetricCalcer;
             if (testTarget) {
-                testMetricCalcer = new TMetricCalcer<TObjective>(*testTarget, LocalExecutor);
+                testMetricCalcer = MakeHolder<TMetricCalcer<TObjective>>(*testTarget, LocalExecutor);
             }
 
             auto snapshotSaver = [&](IOutputStream* out) {
@@ -266,7 +266,7 @@ namespace NCatboostCuda {
                 }
             };
 
-            auto weak = MakeWeakLearner<TWeakLearner>(FeaturesManager, CatBoostOptions);
+            auto weak = MakeWeakLearner<TWeakLearner>(FeaturesManager, Config, CatBoostOptions, Random);
             while (!progressTracker->ShouldStop()) {
                 CheckInterrupted(); // check after long-lasting operation
                 auto iterationTimeGuard = profiler.Profile("Boosting iteration");
@@ -312,18 +312,16 @@ namespace NCatboostCuda {
                         } else {
                             for (ui32 foldId = 0; foldId < taskFolds.size(); ++foldId) {
                                 const auto& fold = taskFolds[foldId];
-                                auto learnTarget = TTargetAtPointTrait<TObjective>::Create(taskTarget,
-                                                                                           fold.EstimateSamples,
-                                                                                           cursor.Get(learnPermutationId,
-                                                                                                      foldId)
-                                                                                               .SliceView(
-                                                                                                   fold.EstimateSamples));
-                                auto validateTarget = TTargetAtPointTrait<TObjective>::Create(taskTarget,
-                                                                                              fold.QualityEvaluateSamples,
-                                                                                              cursor.Get(learnPermutationId,
-                                                                                                         foldId)
-                                                                                                  .SliceView(
-                                                                                                      fold.QualityEvaluateSamples));
+                                auto learnTarget = TTargetAtPointTrait<TObjective>::Create(
+                                    taskTarget,
+                                    fold.EstimateSamples,
+                                    cursor.Get(learnPermutationId, foldId).SliceView(fold.EstimateSamples).AsConstBuf()
+                                );
+                                auto validateTarget = TTargetAtPointTrait<TObjective>::Create(
+                                    taskTarget,
+                                    fold.QualityEvaluateSamples,
+                                    cursor.Get(learnPermutationId, foldId).SliceView(fold.QualityEvaluateSamples).AsConstBuf()
+                                );
 
                                 optimizer.AddTask(std::move(learnTarget),
                                                   std::move(validateTarget));
@@ -390,7 +388,7 @@ namespace NCatboostCuda {
                                 estimator.AddEstimationTask(*iterationCacheHolderPtr,
                                                             targetSlice,
                                                             permutationDataSet,
-                                                            cursorSlice,
+                                                            cursorSlice.AsConstBuf(),
                                                             &models.FoldData[permutation][foldId]);
                             }
                         }
@@ -481,7 +479,7 @@ namespace NCatboostCuda {
                 }
 
                 if (iterationProgressTracker.IsBestTestIteration() && bestTestCursor) {
-                    Y_VERIFY(testCursor);
+                    CB_ENSURE(testCursor, "Need cursor for test data");
                     bestTestCursor->Copy(*testCursor);
                 }
             }

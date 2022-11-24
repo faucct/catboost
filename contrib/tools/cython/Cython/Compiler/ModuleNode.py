@@ -430,7 +430,11 @@ class ModuleNode(Nodes.Node, Nodes.BlockNode):
             except ImportError:
                 import xml.etree.ElementTree as ET
             coverage_xml = ET.parse(coverage_xml_filename).getroot()
-            for el in coverage_xml.getiterator():
+            if hasattr(coverage_xml, 'iter'):
+                iterator = coverage_xml.iter()  # Python 2.7 & 3.2+
+            else:
+                iterator = coverage_xml.getiterator()
+            for el in iterator:
                 el.tail = None  # save some memory
         else:
             coverage_xml = None
@@ -631,7 +635,10 @@ class ModuleNode(Nodes.Node, Nodes.BlockNode):
             code.putln(json.dumps(metadata, indent=4, sort_keys=True))
             code.putln("END: Cython Metadata */")
             code.putln("")
+
+        code.putln("#ifndef PY_SSIZE_T_CLEAN")
         code.putln("#define PY_SSIZE_T_CLEAN")
+        code.putln("#endif /* PY_SSIZE_T_CLEAN */")
 
         for inc in sorted(env.c_includes.values(), key=IncludeCode.sortkey):
             if inc.location == inc.INITIAL:
@@ -925,6 +932,8 @@ class ModuleNode(Nodes.Node, Nodes.BlockNode):
             constructor = None
             destructor = None
             for attr in scope.var_entries:
+                if attr.type.is_cfunction:
+                    code.put("inline ")
                 if attr.type.is_cfunction and attr.type.is_static_method:
                     code.put("static ")
                 elif attr.name == "<init>":
@@ -2404,10 +2413,9 @@ class ModuleNode(Nodes.Node, Nodes.BlockNode):
             code.put_error_if_neg(self.pos, "_import_array()")
 
         code.putln("/*--- Threads initialization code ---*/")
-        code.putln("#if defined(__PYX_FORCE_INIT_THREADS) && __PYX_FORCE_INIT_THREADS")
-        code.putln("#ifdef WITH_THREAD /* Python build with threading support? */")
+        code.putln("#if defined(WITH_THREAD) && PY_VERSION_HEX < 0x030700F0 "
+                   "&& defined(__PYX_FORCE_INIT_THREADS) && __PYX_FORCE_INIT_THREADS")
         code.putln("PyEval_InitThreads();")
-        code.putln("#endif")
         code.putln("#endif")
 
         code.putln("/*--- Module creation code ---*/")
@@ -2627,18 +2635,12 @@ class ModuleNode(Nodes.Node, Nodes.BlockNode):
             # packages require __path__, so all we can do is try to figure
             # out the module path at runtime by rerunning the import lookup
             code.putln("if (!CYTHON_PEP489_MULTI_PHASE_INIT) {")
-            package_name, _ = self.full_module_name.rsplit('.', 1)
-            if '.' in package_name:
-                parent_name = '"%s"' % (package_name.rsplit('.', 1)[0],)
-            else:
-                parent_name = 'NULL'
             code.globalstate.use_utility_code(UtilityCode.load(
                 "SetPackagePathFromImportLib", "ImportExport.c"))
             code.putln(code.error_goto_if_neg(
-                '__Pyx_SetPackagePathFromImportLib(%s, %s)' % (
-                    parent_name,
+                '__Pyx_SetPackagePathFromImportLib(%s)' % (
                     code.globalstate.get_py_string_const(
-                        EncodedString(env.module_name)).cname),
+                        EncodedString(self.full_module_name)).cname),
                 self.pos))
             code.putln("}")
 

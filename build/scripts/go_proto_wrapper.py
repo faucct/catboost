@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import os
 import re
 import shutil
@@ -8,7 +8,7 @@ import tempfile
 from six.moves import range
 
 
-OUT_DIR_FLAG_PATTERN = re.compile('^(--go\w+=)')
+OUT_DIR_FLAG_PATTERN = re.compile(r'^(--go(([-_]\w+))*_out=)')
 
 
 def move_tree(src_root, dst_root):
@@ -41,7 +41,7 @@ def main(arcadia_prefix, contrib_prefix, proto_namespace, args):
     try:
         subprocess.check_output(args, stdin=None, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-        sys.stderr.write('{} returned non-zero exit code {}.\n{}\n'.format(' '.join(e.cmd), e.returncode, e.output))
+        sys.stderr.write('{} returned non-zero exit code {}.\n{}\n'.format(' '.join(e.cmd), e.returncode, e.output.decode('utf-8')))
         return e.returncode
 
     # All Arcadia GO projects should have 'a.yandex-team.ru/' namespace prefix.
@@ -49,23 +49,27 @@ def main(arcadia_prefix, contrib_prefix, proto_namespace, args):
     # project is from vendor directory under the root of Arcadia.
     out_dir_src = os.path.normpath(os.path.join(out_dir_temp, arcadia_prefix, proto_namespace))
     out_dir_dst = out_dir_orig
+    is_from_contrib = False
     if not os.path.isdir(out_dir_src):
+        is_from_contrib = True
         out_dir_src = out_dir_temp
         out_dir_dst = os.path.join(out_dir_orig, contrib_prefix)
 
-    if not os.path.exists(out_dir_dst):
-        proto_list = []
-        option_re = re.compile('^\s*option\s+go_package\s*=\s*')
-        for arg in [x for x in args if x.endswith('.proto')]:
-            with open(arg, 'r') as f:
-                if not any([re.match(option_re, line) for line in f]):
-                    proto_list.append(arg)
-        if proto_list:
-            sys.stderr.write(
-                '\nError: Option go_package is not specified in the following proto files: {}\n'
-                '\nNOTE! You can find detailed description of how to properly set go_package '
-                'option here https://wiki.yandex-team.ru/devrules/Go/#protobufigrpc'.format(', '.join(proto_list)))
-            return 1
+    if not os.path.exists(out_dir_src) or is_from_contrib:
+        protos = [x for x in args if x.endswith('.proto')]
+        if not is_from_contrib or not all(x.startswith(contrib_prefix) for x in protos):
+            proto_list = []
+            option_re = re.compile(r'^\s*option\s+go_package\s*=\s*')
+            for arg in protos:
+                with open(arg, 'r') as f:
+                    if not any([re.match(option_re, line) for line in f]):
+                        proto_list.append(arg)
+            if proto_list:
+                sys.stderr.write(
+                    '\nError: Option go_package is not specified in the following proto files: {}\n'
+                    '\nNOTE! You can find detailed description of how to properly set go_package '
+                    'option here https://wiki.yandex-team.ru/devrules/Go/#protobufigrpc'.format(', '.join(proto_list)))
+                return 1
 
     move_tree(out_dir_src, out_dir_dst)
 

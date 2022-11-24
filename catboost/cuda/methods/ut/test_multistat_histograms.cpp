@@ -157,7 +157,7 @@ Y_UNIT_TEST_SUITE(TPointwiseMultiStatHistogramTest) {
                             dataSet.GetFeatures(),
                             subsets.Target.StatsToAggregate,
                             subsets.Target.Indices,
-                            subsets.Partitions,
+                            subsets.Partitions.AsConstBuf(),
                             subsets.Leaves.size(),
                             &refStats);
             }
@@ -168,7 +168,7 @@ Y_UNIT_TEST_SUITE(TPointwiseMultiStatHistogramTest) {
                             dataSet.GetPermutationFeatures(),
                             subsets.Target.StatsToAggregate,
                             subsets.Target.Indices,
-                            subsets.Partitions,
+                            subsets.Partitions.AsConstBuf(),
                             subsets.Leaves.size(),
                             &refStats);
             }
@@ -485,8 +485,11 @@ Y_UNIT_TEST_SUITE(TPointwiseMultiStatHistogramTest) {
                                                      featuresManager,
                                                      computeSplitPropertiesByBlocksHelper);
 
-        auto subsets = splitPropertiesHelper.CreateInitialSubsets(CreateTestTarget(dataSet, numStats, sampleRate),
-                                                                  maxLeaves);
+        TVector<float> featureWeights(featuresManager.GetFeatureCount(), 1.0f);
+        auto subsets = splitPropertiesHelper.CreateInitialSubsets(
+            CreateTestTarget(dataSet, numStats, sampleRate),
+            maxLeaves,
+            featureWeights);
 
         while (subsets.Leaves.size() < maxLeaves) {
             CATBOOST_DEBUG_LOG << "Leaves count #" << subsets.Leaves.size() << Endl;

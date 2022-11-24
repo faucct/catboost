@@ -2,7 +2,7 @@
 #include <library/cpp/blockcodecs/core/common.h>
 #include <library/cpp/blockcodecs/core/register.h>
 
-#include <contrib/libs/zlib/zlib.h>
+#include <zlib.h>
 
 using namespace NBlockCodecs;
 
@@ -60,5 +60,5 @@ namespace {
             RegisterAlias("zlib", "zlib-6");
         }
     };
-    static const TZLibRegistrar Registrar{};
+    const TZLibRegistrar Registrar{};
 }

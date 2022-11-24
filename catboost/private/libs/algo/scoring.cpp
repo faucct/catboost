@@ -159,7 +159,7 @@ static void GetIndexingParams(
 }
 
 static void GetBitsPerValueAndRawPtr(
-    const TQuantizedForCPUObjectsDataProvider& objectsDataProvider,
+    const TQuantizedObjectsDataProvider& objectsDataProvider,
     const std::tuple<const TOnlineCtrBase&, const TOnlineCtrBase&>& allCtrs,
     const TSplitEnsemble& splitEnsemble,
     size_t* bitsPerValue,
@@ -334,7 +334,7 @@ inline static void FixUpStats(
 
 static void CalcStatsPairwise(
     const TCalcScoreFold& fold,
-    const TQuantizedForCPUObjectsDataProvider& objectsDataProvider,
+    const TQuantizedObjectsDataProvider& objectsDataProvider,
     const TFlatPairsInfo& pairs,
     const std::tuple<const TOnlineCtrBase&, const TOnlineCtrBase&>& allCtrs,
     const TSplitEnsemble& splitEnsemble,
@@ -462,9 +462,9 @@ static void CalcStatsPairwise(
                     }
                     break;
                 case ESplitEnsembleType::FeaturesGroup:
-                    // FeaturesGroups are implemented only in leafwise scoring now
-                    Y_UNREACHABLE();
-                    break;
+                    CB_ENSURE(false, "FeaturesGroups are implemented only in leafwise scoring now");
+                default:
+                    CB_ENSURE(false, "Unexpected split ensemble type");
             }
         },
         /*mergeFunc*/[&](TPairwiseStats* output, TVector<TPairwiseStats>&& addVector) {
@@ -771,7 +771,7 @@ static void CalculateNonPairwiseScore(
 
 
 void CalcStatsAndScores(
-    const TQuantizedForCPUObjectsDataProvider& objectsDataProvider,
+    const TQuantizedObjectsDataProvider& objectsDataProvider,
     const std::tuple<const TOnlineCtrBase&, const TOnlineCtrBase&>& allCtrs,
     const TCalcScoreFold& fold,
     const TCalcScoreFold& prevLevelData,

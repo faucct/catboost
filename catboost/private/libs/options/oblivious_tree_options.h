@@ -50,9 +50,16 @@ namespace NCatboostOptions {
         TGpuOnlyOption<bool> FoldSizeLossNormalization;
         TGpuOnlyOption<bool> AddRidgeToTargetFunctionFlag;
         TGpuOnlyOption<ui32> MaxCtrComplexityForBordersCaching;
+        TGpuOnlyOption<float> MetaL2Exponent;
+        TGpuOnlyOption<float> MetaL2Frequency;
+
+        TGpuOnlyOption<TVector<ui32>> FixedBinarySplits;
 
         TCpuOnlyOption<TMap<ui32, int>> MonotoneConstraints;
         TCpuOnlyOption <bool> DevLeafwiseApproxes;
-        TCpuOnlyOption<TFeaturePenaltiesOptions> FeaturePenalties;
+        TOption<TFeaturePenaltiesOptions> FeaturePenalties;
+
+    private:
+        TOption<ETaskType> TaskType;
     };
 }

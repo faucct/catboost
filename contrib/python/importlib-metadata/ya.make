@@ -1,35 +1,20 @@
 PY23_LIBRARY()
 
+LICENSE(Service-Py23-Proxy)
 
 
-VERSION(2.0.0)
 
-LICENSE(Apache-2.0)
+IF (PYTHON2)
+    PEERDIR(contrib/python/importlib-metadata/py2)
+ELSE()
+    PEERDIR(contrib/python/importlib-metadata/py3)
+ENDIF()
 
 NO_LINT()
 
-PEERDIR(
-    library/python/resource
-)
-
-IF (PYTHON2)
-    PEERDIR(
-        contrib/python/pathlib2
-        contrib/python/contextlib2
-        contrib/python/configparser
-    )
-ENDIF()
-
-PY_SRCS(
-    TOP_LEVEL
-    importlib_metadata/__init__.py
-    importlib_metadata/_compat.py
-)
-
-RESOURCE_FILES(
-    PREFIX contrib/python/importlib-metadata/
-    .dist-info/METADATA
-    .dist-info/top_level.txt
-)
-
 END()
+
+RECURSE(
+    py2
+    py3
+)

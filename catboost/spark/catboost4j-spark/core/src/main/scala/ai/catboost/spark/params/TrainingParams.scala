@@ -22,6 +22,16 @@ trait TrainingParamsTrait
   )
 
   @ParamGetterSetter
+  final val trainingDriverListeningPort: IntParam = new IntParam(
+    this,
+    "trainingDriverListeningPort",
+    "Port used for communication on the driver's side during training. Default is 0, that means automatic assignment"
+    + ""
+  )
+
+  setDefault(trainingDriverListeningPort, 0)
+
+  @ParamGetterSetter
   final val workerInitializationTimeout: DurationParam = new DurationParam(
     this,
     "workerInitializationTimeout",
@@ -30,6 +40,36 @@ trait TrainingParamsTrait
   )
 
   setDefault(workerInitializationTimeout, java.time.Duration.ofMinutes(10))
+
+  @ParamGetterSetter
+  final val workerMaxFailures: IntParam = new IntParam(
+    this,
+    "workerMaxFailures",
+    "Number of individual CatBoost workers failures before giving up training. "
+    + "Should be greater than or equal to 1. Default is 4"
+  )
+
+  setDefault(workerMaxFailures, 4)
+
+  @ParamGetterSetter
+  final val workerListeningPort: IntParam = new IntParam(
+    this,
+    "workerListeningPort",
+    "Port used for communication on the workers' side during training. Default is 0, that means automatic assignment"
+    + ""
+  )
+
+  setDefault(workerListeningPort, 0)
+
+  @ParamGetterSetter
+  final val connectTimeout: DurationParam = new DurationParam(
+    this,
+    "connectTimeout",
+    "Timeout to wait while establishing socket connections between TrainingDriver and workers."
+    + "Default is 1 minute"
+  )
+
+  setDefault(connectTimeout, java.time.Duration.ofMinutes(1))
 
   @ParamGetterSetter
   final val lossFunction: Param[String] = new Param[String](
@@ -118,7 +158,7 @@ trait TrainingParamsTrait
   @ParamGetterSetter
   final val subsample: FloatParam = new FloatParam(
     this,
-    "baggingTemperature",
+    "subsample",
     "Sample rate for bagging. "
     + "The default value depends on the dataset size and the bootstrap type, see documentation for details."
   )
@@ -181,6 +221,14 @@ trait TrainingParamsTrait
     "depth",
     "Depth of the tree."
     + "Default value is 6."
+  )
+
+  @ParamGetterSetter
+  final val oneHotMaxSize: IntParam = new IntParam(
+    this,
+    "oneHotMaxSize",
+    "Use one-hot encoding for all categorical features with a number of different values less than or equal "
+    + "to the given parameter value. Ctrs are not calculated for such features."
   )
 
   @ParamGetterSetter
@@ -277,7 +325,7 @@ trait TrainingParamsTrait
   )
 
   @ParamGetterSetter
-  final val featureWeightsMap: OrderedStringMapParam[Float] = new OrderedStringMapParam[Float](
+  final val featureWeightsMap: OrderedStringMapParam[Double] = new OrderedStringMapParam[Double](
     this,
     "featureWeightsMap",
     "Per-feature multiplication weights used when choosing the best split. Map is 'feature_name' -> weight. "
@@ -296,7 +344,7 @@ trait TrainingParamsTrait
   )
 
   @ParamGetterSetter
-  final val firstFeatureUsePenaltiesMap: OrderedStringMapParam[Float] = new OrderedStringMapParam[Float](
+  final val firstFeatureUsePenaltiesMap: OrderedStringMapParam[Double] = new OrderedStringMapParam[Double](
     this,
     "firstFeatureUsePenaltiesMap",
     "Per-feature penalties for the first occurrence of the feature in the model. The given value is "
@@ -324,7 +372,7 @@ trait TrainingParamsTrait
   )
 
   @ParamGetterSetter
-  final val perObjectFeaturePenaltiesMap: OrderedStringMapParam[Float] = new OrderedStringMapParam[Float](
+  final val perObjectFeaturePenaltiesMap: OrderedStringMapParam[Double] = new OrderedStringMapParam[Double](
     this,
     "perObjectFeaturePenaltiesMap",
     "Per-object penalties for the first use of the feature for the object. The given value is multiplied by "
@@ -464,7 +512,7 @@ trait TrainingParamsTrait
  */
 trait ClassifierTrainingParamsTrait extends TrainingParamsTrait {
   @ParamGetterSetter
-  final val classWeightsMap: OrderedStringMapParam[Float] = new OrderedStringMapParam[Float](
+  final val classWeightsMap: OrderedStringMapParam[Double] = new OrderedStringMapParam[Double](
     this,
     "classWeightsMap",
     "Map from class name to weight. The values are used as multipliers for the object weights. "

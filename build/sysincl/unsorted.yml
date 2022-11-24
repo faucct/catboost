@@ -1,7 +1,5 @@
-- source_filter: "^contrib"
+- source_filter: "^contrib(?!/restricted/gstreamer/gst/parse)"
   includes:
-    - CL/cl.h
-    - CL/opencl.h
     - port.h
     - types.h
     - stat.h
@@ -219,7 +217,6 @@
   - json_valueiterator.inl
   - value.h
   - pthread/mit/sys/timers.h
-  - ../src/config.h
   - sljit/sljitLir.c
   - pcre_printint.c
   #ifdef defined(emacs) && CONTRIB && TRASH
@@ -250,23 +247,12 @@
   - BaseTsd.h
   - iphlpapi.h
 
+- source_filter: "^(?!contrib/python/line_profiler/)"
+  includes:
+  - timers.h
+
 - includes:
   - cpu-features.h
-  - cuda.h
-  - cublas.h
-  - cublas_v2.h
-  - cublasLt.h
-  - cuda_runtime.h
-  - cuda_runtime_api.h
-  - cusolverDn.h
-  - cupti.h
-  - curand.h
-  - curand_mtgp32_host.h
-  - curand_mtgp32dc_p_11213.h
-  - cusparse.h
-  - cooperative_groups.h
-  - driver_types.h
-  - nvToolsExt.h
   - cuda/include/cuComplex.h
   - cuda/include/cublas_v2.h
   - cuda/include/cuda.h
@@ -276,7 +262,6 @@
   - cpuid.h
   - nan.h
   - omp.h
-  - stdatomic.h
   - unlocked-io.h
   - cygwin/version.h
   - zircon/syscalls.h
@@ -339,6 +324,7 @@
   - sys/mpctl.h
   - sys/mutex.h
   - sys/rwlock.h
+  - sys/semaphore.h
   - sys/smp.h
   - sys/stdint.h
   - sys/systm.h
@@ -346,7 +332,6 @@
   - sys/timespec.h
   - sys/umtx.h
   - sys/uuid.h
-  - timers.h
   - ucred.h
   - varargs.h
   - vm/vm_param.h
@@ -379,6 +364,7 @@
   - crtassem.h
   #endif
   #if defined(_unix_) && TODO
+  - bits/types/mbstate_t.h
   - sys/atomic.h
   - sys/atomic_op.h
   - sys/bsdskt.h
@@ -390,6 +376,7 @@
   - sys/fmutex.h
   - sys/int_types.h
   - sys/loadavg.h
+  - sys/localedef.h
   - sys/machlock.h
   - sys/mkdev.h
   - sys/modem.h
@@ -423,6 +410,7 @@
   - QuickDraw.h
   - TextUtils.h
   - Types.h
+  - sys/_types/_mbstate_t.h
   #endif
   #if defined(_OS2_)
   - os2.h
@@ -524,9 +512,6 @@
   - android/api-level.h
   - android/ndk-version.h
   #endif
-  #if defined(__HP_aCC)
-  - acxx_demangle.h
-  #endif
   #if defined(HAVE_CONFIG_H) && TODO
   - config_auto.h
   #endif
@@ -564,7 +549,6 @@
   - sys/systemcfg.h
   - sys/thread.h
   #endif
-  - mbarrier.h
   - iostream.h
   - streambuf.h
   - ostream.h
@@ -686,11 +670,7 @@
   - tr1/complex
   - tbb/scalable_allocator.h
   - libmemcached/dtrace_probes.h
-  # CUDA include files, potentially referenced by cv/imgclassifiers/contrib
-  - cuda_fp16.h
-  - curand_kernel.h
-  - host_defines.h
-  - vector_types.h
+  # unknown
   - win_stdint.h
   - probes.h
   - thread.h
@@ -715,7 +695,6 @@
   - sys/systeminfo.h
   - sys/vfstab.h
   - sys/vmount.h
-  - libxsmm.h
   - CL/sycl.hpp
   # libpcap files
   - os-proto.h
@@ -808,7 +787,6 @@
   - tr1/functional
   - time64.h
   - extern.h
-  - reentrant.h
   #if defined(__FreeBSD__)
   - _ctype.h
   - alias.h
@@ -817,7 +795,6 @@
   - gelf.h
   - gnuregex.h
   - kafs.h
-  - libelf.h
   - login_cap.h
   - machine/_inttypes.h
   - machine/_stdint.h
@@ -908,9 +885,6 @@
   #if defined(__QNXNTO__)
   - sys/cpuinline.h
   #endif
-  #if V8_OS_QNX
-  - backtrace.h
-  #endif
   - yabs_mx_calc_table.h
   - net/errno.h
   - sys/mode.h
@@ -983,17 +957,11 @@
   #endif
   - zend_exceptions.h
   #if MATLAB_MEX_FILE
-  # ICU
-  # CUDA include files, potentially referenced by cv/imgclassifiers/contrib
-  - cuComplex.h
-  - cuda/extras/CUPTI/include/cupti.h
-  - cufft.h
+  # unknown
   - GL/glx.h
   - CL/va_ext.h
   - sys/sysconf.h
-  - npp.h
   - ivx.hpp
-  - cuda_gl_interop.h
   - clAmdBlas.h
   - clAmdFft.h
   - va/va.h

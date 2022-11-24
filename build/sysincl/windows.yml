@@ -16,6 +16,7 @@
   - capi.h
   - cet.h
   - cfg.h
+  - comdef.h
   - commctrl.h
   - commdlg.h
   - common.ver
@@ -165,6 +166,7 @@
   - olectl.h
   - packon.h
   - packoff.h
+  - pathcch.h
   - p2p.h
   - pdh.h
   - pdhmsg.h
@@ -188,6 +190,7 @@
   - realtimeapiset.h
   - reason.h
   - richedit.h
+  - roapi.h
   - robuffer.h
   - rpc.h
   - rpcdce.h
@@ -284,6 +287,7 @@
   - winsdkver.h
   - winsock.h
   - winsock2.h
+  - winstring.h
   - winsvc.h
   - winternl.h
   - winuser.h
@@ -298,6 +302,7 @@
   - wrl/ftm.h
   - wrl/implements.h
   - wrl/wrappers/corewrappers.h
+  - ws2bth.h
   - ws2def.h
   - ws2ipdef.h
   - ws2spi.h
@@ -308,3 +313,4 @@
   - wtypes.h
   - xa.h
   - xaudio2.h
+  - xmllite.h

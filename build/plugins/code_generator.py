@@ -1,9 +1,9 @@
 import re
 import os
 
-import _import_wrapper as iw
+import ymake
 
-pattern = re.compile("#include\s*[<\"](?P<INDUCED>[^>\"]+)[>\"]|(?:@|{@)\s*(?:import|include|from)\s*[\"'](?P<INCLUDE>[^\"']+)[\"']")
+pattern = re.compile(r"#include\s*[<\"](?P<INDUCED>[^>\"]+)[>\"]|(?:@|{@)\s*(?:import|include|from)\s*[\"'](?P<INCLUDE>[^\"']+)[\"']")
 
 
 class CodeGeneratorTemplateParser(object):
@@ -41,5 +41,5 @@ class CodeGeneratorTemplateParser(object):
 
 
 def init():
-    iw.addparser('markettemplate', CodeGeneratorTemplateParser)
-    iw.addparser('macro', CodeGeneratorTemplateParser)
+    ymake.addparser('markettemplate', CodeGeneratorTemplateParser)
+    ymake.addparser('macro', CodeGeneratorTemplateParser)

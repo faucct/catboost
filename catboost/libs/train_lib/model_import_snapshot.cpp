@@ -11,7 +11,7 @@ namespace NCB{
     public:
         TFullModel ReadModel(IInputStream *modelStream) const override {
             Y_UNUSED(modelStream);
-            Y_UNREACHABLE();
+            CB_ENSURE(false, "This Unimplemented");
         }
         TFullModel ReadModel(const TString& snapshotPath) const override {
             CB_ENSURE(NFs::Exists(snapshotPath), "Model file doesn't exist: " << snapshotPath);
@@ -29,10 +29,10 @@ namespace NCB{
             for (ui32 treeId = 0; treeId < learnProgress.TreeStruct.size(); ++treeId) {
                 // TODO(ilyzhin) implement it
                 CB_ENSURE_INTERNAL(
-                    HoldsAlternative<TSplitTree>(learnProgress.TreeStruct[treeId]),
+                    std::holds_alternative<TSplitTree>(learnProgress.TreeStruct[treeId]),
                     "ReadModel is unimplemented for non-symmetric trees yet");
 
-                const TSplitTree& tree = Get<TSplitTree>(learnProgress.TreeStruct[treeId]);
+                const TSplitTree& tree = std::get<TSplitTree>(learnProgress.TreeStruct[treeId]);
                 modelSplits.resize(tree.Splits.size());
                 auto iter = modelSplits.begin();
                 for (const TSplit& split : tree.Splits) {

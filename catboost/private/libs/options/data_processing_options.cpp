@@ -26,6 +26,8 @@ NCatboostOptions::TDataProcessingOptions::TDataProcessingOptions(ETaskType type)
       , ClassLabels("class_names", TVector<NJson::TJsonValue>()) // "class_names" is used for compatibility
       , DevDefaultValueFractionToEnableSparseStorage("dev_default_value_fraction_for_sparse", 0.83f)
       , DevSparseArrayIndexingType("dev_sparse_array_indexing", NCB::ESparseArrayIndexingType::Indices)
+      , ForceUnitAutoPairWeights("force_unit_auto_pair_weights", false)
+      , EvalFraction("eval_fraction", 0.0f)
       , GpuCatFeaturesStorage("gpu_cat_features_storage", EGpuCatFeaturesStorage::GpuRam, type)
       , DevLeafwiseScoring("dev_leafwise_scoring", false, type)
       , DevGroupFeatures("dev_group_features", false, type)
@@ -37,10 +39,11 @@ NCatboostOptions::TDataProcessingOptions::TDataProcessingOptions(ETaskType type)
 void NCatboostOptions::TDataProcessingOptions::Load(const NJson::TJsonValue& options) {
     CheckedLoad(
         options, &IgnoredFeatures, &HasTimeFlag, &AllowConstLabel, &TargetBorder,
-        &FloatFeaturesBinarization, &PerFloatFeatureQuantization, &TextProcessingOptions,
+        &FloatFeaturesBinarization, &PerFloatFeatureQuantization,
+        &TextProcessingOptions, &EmbeddingProcessingOptions,
         &ClassesCount, &ClassWeights, &AutoClassWeights, &ClassLabels,
         &DevDefaultValueFractionToEnableSparseStorage,
-        &DevSparseArrayIndexingType,
+        &DevSparseArrayIndexingType, &ForceUnitAutoPairWeights, &EvalFraction,
         &GpuCatFeaturesStorage, &DevLeafwiseScoring, &DevGroupFeatures
     );
     Validate();
@@ -50,26 +53,31 @@ void NCatboostOptions::TDataProcessingOptions::Load(const NJson::TJsonValue& opt
 void NCatboostOptions::TDataProcessingOptions::Save(NJson::TJsonValue* options) const {
     SaveFields(
         options, IgnoredFeatures, HasTimeFlag, AllowConstLabel, TargetBorder,
-        FloatFeaturesBinarization, PerFloatFeatureQuantization, TextProcessingOptions,
+        FloatFeaturesBinarization, PerFloatFeatureQuantization,
+        TextProcessingOptions, EmbeddingProcessingOptions,
         ClassesCount, ClassWeights, AutoClassWeights, ClassLabels,
         DevDefaultValueFractionToEnableSparseStorage,
-        DevSparseArrayIndexingType,
+        DevSparseArrayIndexingType, ForceUnitAutoPairWeights, EvalFraction,
         GpuCatFeaturesStorage, DevLeafwiseScoring, DevGroupFeatures
     );
 }
 
 bool NCatboostOptions::TDataProcessingOptions::operator==(const TDataProcessingOptions& rhs) const {
     return std::tie(IgnoredFeatures, HasTimeFlag, AllowConstLabel, TargetBorder,
-                    FloatFeaturesBinarization, PerFloatFeatureQuantization, TextProcessingOptions,
+                    FloatFeaturesBinarization, PerFloatFeatureQuantization,
+                    TextProcessingOptions, EmbeddingProcessingOptions,
                     ClassesCount, ClassWeights, ClassLabels,
                     DevDefaultValueFractionToEnableSparseStorage,
-                    DevSparseArrayIndexingType, GpuCatFeaturesStorage, DevLeafwiseScoring,
+                    DevSparseArrayIndexingType, ForceUnitAutoPairWeights, EvalFraction,
+                    GpuCatFeaturesStorage, DevLeafwiseScoring,
                     DevGroupFeatures, AutoClassWeights) ==
            std::tie(rhs.IgnoredFeatures, rhs.HasTimeFlag, rhs.AllowConstLabel, rhs.TargetBorder,
-                    rhs.FloatFeaturesBinarization, rhs.PerFloatFeatureQuantization, rhs.TextProcessingOptions,
+                    rhs.FloatFeaturesBinarization, rhs.PerFloatFeatureQuantization,
+                    rhs.TextProcessingOptions, rhs.EmbeddingProcessingOptions,
                     rhs.ClassesCount, rhs.ClassWeights, rhs.ClassLabels,
                     rhs.DevDefaultValueFractionToEnableSparseStorage,
-                    rhs.DevSparseArrayIndexingType, rhs.GpuCatFeaturesStorage, rhs.DevLeafwiseScoring,
+                    rhs.DevSparseArrayIndexingType, rhs.ForceUnitAutoPairWeights, rhs.EvalFraction,
+                    rhs.GpuCatFeaturesStorage, rhs.DevLeafwiseScoring,
                     rhs.DevGroupFeatures, rhs.AutoClassWeights);
 }
 
@@ -89,6 +97,7 @@ void NCatboostOptions::TDataProcessingOptions::Validate() const {
     );
     CB_ENSURE(AutoClassWeights.Get() == EAutoClassWeightsType::None || ClassWeights.IsDefault(),
         "ClassWeights should be default if AutoClassWeights is not None");
+    CB_ENSURE((EvalFraction >= 0.0) && (EvalFraction < 1.0), "EvalFraction must be in [0, 1) range");
 }
 
 

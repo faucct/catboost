@@ -9,6 +9,11 @@
 #include <util/stream/output.h>
 #include <util/stream/input.h>
 
+#ifndef __NVCC__
+    // cuda is compiled in C++14 mode at the time
+    #include <variant>
+#endif
+
 template <typename T>
 class TSerializeTypeTraits {
 public:
@@ -365,6 +370,10 @@ template <>
 class TSerializer<TUtf16String>: public TVectorSerializer<TUtf16String> {
 };
 
+template <class TChar>
+class TSerializer<std::basic_string<TChar>>: public TVectorSerializer<std::basic_string<TChar>> {
+};
+
 template <class T, class A>
 class TSerializer<TDeque<T, A>>: public TVectorSerializer<TDeque<T, A>> {
 };
@@ -434,7 +443,7 @@ struct TTupleSerializer {
 };
 
 template <typename... TArgs>
-struct TSerializer<std::tuple<TArgs...>> : TTupleSerializer<std::tuple<TArgs...>> {
+struct TSerializer<std::tuple<TArgs...>>: TTupleSerializer<std::tuple<TArgs...>> {
 };
 
 template <>
@@ -482,11 +491,11 @@ public:
         : TBase(s)
     {
         Y_UNUSED(cnt);
-        P_ = TBase::S_.begin();
+        P_ = this->S_.begin();
     }
 
     inline void Insert(const TValue& v) {
-        P_ = TBase::S_.insert(P_, v);
+        P_ = this->S_.insert(P_, v);
     }
 
 private:
@@ -630,6 +639,8 @@ public:
     }
 };
 
+#ifndef __NVCC__
+
 namespace NPrivate {
     template <class Variant, class T, size_t I>
     void LoadVariantAlternative(IInputStream* is, Variant& v) {
@@ -640,14 +651,14 @@ namespace NPrivate {
 }
 
 template <typename... Args>
-struct TSerializer<TVariant<Args...>> {
-    using TVar = TVariant<Args...>;
+struct TSerializer<std::variant<Args...>> {
+    using TVar = std::variant<Args...>;
 
     static_assert(sizeof...(Args) < 256, "We use ui8 to store tag");
 
     static void Save(IOutputStream* os, const TVar& v) {
         ::Save<ui8>(os, v.index());
-        Visit([os](const auto& data) {
+        std::visit([os](const auto& data) {
             ::Save(os, data);
         }, v);
     }
@@ -664,11 +675,13 @@ struct TSerializer<TVariant<Args...>> {
 private:
     template <size_t... Is>
     static void LoadImpl(IInputStream* is, TVar& v, ui8 index, std::index_sequence<Is...>) {
-        using TLoader = void(*)(IInputStream*, TVar& v);
+        using TLoader = void (*)(IInputStream*, TVar & v);
         constexpr TLoader loaders[] = {::NPrivate::LoadVariantAlternative<TVar, Args, Is>...};
         loaders[index](is, v);
     }
 };
+
+#endif
 
 template <class T>
 static inline void SaveLoad(IOutputStream* out, const T& t) {
@@ -698,3 +711,26 @@ static inline void LoadMany(S* s, Ts&... t) {
     inline void Load(IInputStream* s) {        \
         ::LoadMany(s, __VA_ARGS__);            \
     }
+
+#define Y_SAVELOAD_DEFINE_OVERRIDE(...)          \
+    void Save(IOutputStream* s) const override { \
+        ::SaveMany(s, __VA_ARGS__);              \
+    }                                            \
+                                                 \
+    void Load(IInputStream* s) override {        \
+        ::LoadMany(s, __VA_ARGS__);              \
+    }
+
+template <class T>
+struct TNonVirtualSaver {
+    const T* Data;
+    void Save(IOutputStream* out) const {
+        Data->T::Save(out);
+    }
+};
+
+template <typename S, typename T, typename... R>
+inline void LoadMany(S* s, TNonVirtualSaver<T> t, R&... r) {
+    const_cast<T*>(t.Data)->T::Load(s);
+    ::LoadMany(s, r...);
+}

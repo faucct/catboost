@@ -261,14 +261,18 @@ void THttpParser::OnEof() {
 }
 
 bool THttpParser::DecodeContent() {
-    if (!ContentEncoding_ || ContentEncoding_ == "identity") {
+    if (!ContentEncoding_ || ContentEncoding_ == "identity" || ContentEncoding_ == "none") {
         DecodedContent_ = Content_;
         return false;
     }
 
     TMemoryInput in(Content_.data(), Content_.size());
     if (ContentEncoding_ == "gzip") {
-        DecodedContent_ = TZLibDecompress(&in, ZLib::GZip).ReadAll();
+        auto decompressor = TZLibDecompress(&in, ZLib::GZip);
+        if (!GzipAllowMultipleStreams_) {
+            decompressor.SetAllowMultipleStreams(false);
+        }
+        DecodedContent_ = decompressor.ReadAll();
     } else if (ContentEncoding_ == "deflate") {
 
         //https://tools.ietf.org/html/rfc1950
@@ -305,6 +309,9 @@ bool THttpParser::DecodeContent() {
         }
         NBlockCodecs::TDecodedInput decoder(&in, codec);
         DecodedContent_ = decoder.ReadAll();
+    } else if (ContentEncoding_ == "lz4") {
+        const auto* codec = NBlockCodecs::Codec(TStringBuf(ContentEncoding_));
+        DecodedContent_ = codec->Decode(Content_);
     } else {
         throw THttpParseException() << "Unsupported content-encoding method: " << ContentEncoding_;
     }

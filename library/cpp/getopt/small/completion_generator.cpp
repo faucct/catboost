@@ -1,6 +1,6 @@
 #include "completion_generator.h"
 
-#include <library/cpp/overloaded/overloaded.h>
+#include <util/generic/overloaded.h>
 
 #include <util/string/ascii.h>
 #include <util/generic/hash_set.h>
@@ -48,7 +48,7 @@ namespace NLastGetopt {
             L << "local prefix_orig=\"$PREFIX\"";
             L << "local suffix_orig=\"$SUFFIX\"";
             L;
-            Visit(TOverloaded{
+            std::visit(TOverloaded{
                 [&out, &manager](const TModChooser* modChooser) {
                     GenerateModesCompletion(out, *modChooser, manager);
                 },
@@ -390,7 +390,7 @@ namespace NLastGetopt {
             L << "local need_space=\"1\"";
             L << "local IFS=$' \\t\\n'";
             L;
-            Visit(TOverloaded{
+            std::visit(TOverloaded{
                 [&out, &manager](const TModChooser* modChooser) {
                     GenerateModesCompletion(out, *modChooser, manager, 1);
                 },
@@ -553,12 +553,6 @@ namespace NLastGetopt {
                         }
                         L << ";;";
                     }
-                }
-
-                L << "-*)";
-                {
-                    I;
-                    L << ";;";
                 }
 
                 L << "*)";

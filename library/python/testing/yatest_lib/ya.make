@@ -8,6 +8,7 @@ PY_SRCS(
     external.py
     test_splitter.py
     tools.py
+    ya.py
 )
 
 PEERDIR(
@@ -19,8 +20,6 @@ IF(PYTHON2)
         contrib/python/enum34
     )
 ENDIF()
-
-NO_LINT()
 
 END()
 

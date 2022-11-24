@@ -410,7 +410,13 @@ Y_UNIT_TEST_SUITE(TPointwiseHistogramTest) {
 
         TObliviousTreeStructure result;
 
-        TMirrorBuffer<float> featureWeights;
+        const auto featureCount = featuresManager.GetFeatureCount();
+        const auto& featureWeightsCpu = ExpandFeatureWeights(treeConfig.FeaturePenalties.Get(), featureCount);
+        TMirrorBuffer<float> featureWeights = TMirrorBuffer<float>::Create(NCudaLib::TMirrorMapping(featureCount));
+        featureWeights.Write(featureWeightsCpu);
+        double scoreBeforeSplit = 0.0;
+
+        TMirrorBuffer<float> catFeatureWeights;
 
         for (ui32 depth = 0; depth < maxDepth; ++depth) {
             //warning: don't change order of commands. current pipeline ensures maximum stream-parallelism until read
@@ -448,12 +454,12 @@ Y_UNIT_TEST_SUITE(TPointwiseHistogramTest) {
             manager.WaitComplete();
             auto currentParts = TSubsetsHelper<NCudaLib::TMirrorMapping>::CurrentPartsView(subsets);
 
-            UpdateFeatureWeightsForBestSplits(featuresManager, modelSizeReg, featureWeights);
+            UpdateFeatureWeightsForBestSplits(featuresManager, modelSizeReg, catFeatureWeights);
 
             if (featuresScoreCalcer) {
                 CheckResultsForCompressedDataSet(dataSet.GetFeatures(),
                                                  *featuresScoreCalcer,
-                                                 currentParts,
+                                                 currentParts.AsConstBuf(),
                                                  subsets.WeightedTarget,
                                                  subsets.Weights,
                                                  observationIndices,
@@ -464,7 +470,7 @@ Y_UNIT_TEST_SUITE(TPointwiseHistogramTest) {
             if (simpleCtrScoreCalcer) {
                 CheckResultsForCompressedDataSet(dataSet.GetPermutationFeatures(),
                                                  *simpleCtrScoreCalcer,
-                                                 currentParts,
+                                                 currentParts.AsConstBuf(),
                                                  subsets.WeightedTarget,
                                                  subsets.Weights,
                                                  directObservationIndices,
@@ -474,10 +480,18 @@ Y_UNIT_TEST_SUITE(TPointwiseHistogramTest) {
 
             {
                 if (featuresScoreCalcer) {
-                    featuresScoreCalcer->ComputeOptimalSplit(partitionStats, featureWeights);
+                    featuresScoreCalcer->ComputeOptimalSplit(
+                        partitionStats.AsConstBuf(),
+                        catFeatureWeights.AsConstBuf(),
+                        featureWeights.AsConstBuf(),
+                        scoreBeforeSplit);
                 }
                 if (simpleCtrScoreCalcer) {
-                    simpleCtrScoreCalcer->ComputeOptimalSplit(partitionStats, featureWeights);
+                    simpleCtrScoreCalcer->ComputeOptimalSplit(
+                        partitionStats.AsConstBuf(),
+                        catFeatureWeights.AsConstBuf(),
+                        featureWeights.AsConstBuf(),
+                        scoreBeforeSplit);
                 }
             }
 
@@ -566,7 +580,13 @@ Y_UNIT_TEST_SUITE(TPointwiseHistogramTest) {
 
         TObliviousTreeStructure result;
 
-        TMirrorBuffer<float> featureWeights;
+        const auto featureCount = featuresManager.GetFeatureCount();
+        const auto& featureWeightsCpu = ExpandFeatureWeights(treeConfig.FeaturePenalties.Get(), featureCount);
+        TMirrorBuffer<float> featureWeights = TMirrorBuffer<float>::Create(NCudaLib::TMirrorMapping(featureCount));
+        featureWeights.Write(featureWeightsCpu);
+        double scoreBeforeSplit = 0.0;
+
+        TMirrorBuffer<float> catFeatureWeights;
 
         for (ui32 depth = 0; depth < maxDepth; ++depth) {
             //warning: don't change order of commands. current pipeline ensures maximum stream-parallelism until read
@@ -602,12 +622,12 @@ Y_UNIT_TEST_SUITE(TPointwiseHistogramTest) {
             NCudaLib::AllReduceThroughMaster(subsets.PartitionStats, reducedPartsStats);
 
 
-            UpdateFeatureWeightsForBestSplits(featuresManager, modelSizeReg, featureWeights);
+            UpdateFeatureWeightsForBestSplits(featuresManager, modelSizeReg, catFeatureWeights);
 
             if (featuresScoreCalcer) {
                 CheckResultsForCompressedDataSet(dataSet.GetFeatures(),
                                                  *featuresScoreCalcer,
-                                                 currentParts,
+                                                 currentParts.AsConstBuf(),
                                                  subsets.WeightedTarget,
                                                  subsets.Weights,
                                                  docs,
@@ -618,7 +638,7 @@ Y_UNIT_TEST_SUITE(TPointwiseHistogramTest) {
             if (simpleCtrScoreCalcer) {
                 CheckResultsForCompressedDataSet(dataSet.GetPermutationFeatures(),
                                                  *simpleCtrScoreCalcer,
-                                                 currentParts,
+                                                 currentParts.AsConstBuf(),
                                                  subsets.WeightedTarget,
                                                  subsets.Weights,
                                                  docs,
@@ -628,10 +648,18 @@ Y_UNIT_TEST_SUITE(TPointwiseHistogramTest) {
 
             {
                 if (featuresScoreCalcer) {
-                    featuresScoreCalcer->ComputeOptimalSplit(reducedPartsStats, featureWeights);
+                    featuresScoreCalcer->ComputeOptimalSplit(
+                        reducedPartsStats.AsConstBuf(),
+                        catFeatureWeights.AsConstBuf(),
+                        featureWeights.AsConstBuf(),
+                        scoreBeforeSplit);
                 }
                 if (simpleCtrScoreCalcer) {
-                    simpleCtrScoreCalcer->ComputeOptimalSplit(reducedPartsStats, featureWeights);
+                    simpleCtrScoreCalcer->ComputeOptimalSplit(
+                        reducedPartsStats.AsConstBuf(),
+                        catFeatureWeights.AsConstBuf(),
+                        featureWeights.AsConstBuf(),
+                        scoreBeforeSplit);
                 }
             }
 

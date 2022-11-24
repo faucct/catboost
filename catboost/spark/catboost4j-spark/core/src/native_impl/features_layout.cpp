@@ -1,8 +1,7 @@
 #include "features_layout.h"
 
-#include <util/generic/cast.h>
 #include <util/generic/string.h>
-#include <util/generic/vector.h>
+
 
 using namespace NCB;
 
@@ -13,11 +12,11 @@ TFeatureMetaInfo MakeFeatureMetaInfo(
     bool isSparse,
     bool isIgnored,
     bool isAvailable
-) throw (yexception) {
+) {
     return TFeatureMetaInfo(type, name, isSparse, isIgnored, isAvailable);
 }
 
-TFeaturesLayout MakeFeaturesLayout(TVector<TFeatureMetaInfo>* data) throw (yexception) {
+TFeaturesLayout MakeFeaturesLayout(TVector<TFeatureMetaInfo>* data) {
     return TFeaturesLayout(data);
 }
 
@@ -25,7 +24,7 @@ TFeaturesLayout MakeFeaturesLayout(
     const int featureCount,
     const TVector<TString>& featureNames,
     const TVector<i32>& ignoredFeatures
-) throw (yexception) {
+) {
     TFeaturesLayout result(SafeIntegerCast<ui32>(featureCount), /*catFeatureIndices*/ {}, featureNames);
 
     for (auto i : ignoredFeatures) {
@@ -35,14 +34,21 @@ TFeaturesLayout MakeFeaturesLayout(
     return result;
 }
 
-TVector<i32> GetAvailableFloatFeatures(const TFeaturesLayout& featuresLayout) throw (yexception) {
-    TVector<i32> result;
-    result.reserve(featuresLayout.GetFloatFeatureCount());
-    featuresLayout.IterateOverAvailableFeatures<EFeatureType::Float>(
-        [&] (TFloatFeatureIdx idx) {
-            result.push_back(SafeIntegerCast<i32>(*idx));
-        }
-    );
-
-    return result;
+NCB::TFeaturesLayoutPtr CloneWithSelectedFeatures(
+    const NCB::TFeaturesLayout& featuresLayout,
+    TConstArrayRef<i32> selectedFeatures
+) {
+    TConstArrayRef<TFeatureMetaInfo> srcFeaturesMetaInfo = featuresLayout.GetExternalFeaturesMetaInfo();
+    TVector<TFeatureMetaInfo> dstFeaturesMetaInfo;
+    dstFeaturesMetaInfo.reserve(srcFeaturesMetaInfo.size());
+    for (const auto& srcFeatureMetaInfo : srcFeaturesMetaInfo) {
+        dstFeaturesMetaInfo.push_back(srcFeatureMetaInfo);
+        dstFeaturesMetaInfo.back().IsIgnored = true;
+        dstFeaturesMetaInfo.back().IsAvailable = false;
+    }
+    for (auto i : selectedFeatures) {
+        dstFeaturesMetaInfo[i].IsIgnored = false;
+        dstFeaturesMetaInfo[i].IsAvailable = true;
+    }
+    return MakeIntrusive<TFeaturesLayout>(&dstFeaturesMetaInfo);
 }

@@ -35,7 +35,9 @@ namespace NCatboostCuda {
                                   NCB::TFeatureEstimatorsPtr estimators,
                                   const NCB::TFeaturesLayout& featuresLayout,
                                   const TVector<NCB::TExclusiveFeaturesBundle>& learnExclusiveFeatureBundles,
-                                  NCB::TQuantizedFeaturesInfoPtr quantizedFeaturesInfo);
+                                  NCB::TQuantizedFeaturesInfoPtr quantizedFeaturesInfo,
+                                  ui32 maxObjectsCount,
+                                  bool enableShuffling = true);
 
         TBinarizedFeaturesManager(const TBinarizedFeaturesManager& featureManager, const TVector<ui32>& ignoredFeatureIds);
 
@@ -84,7 +86,7 @@ namespace NCatboostCuda {
         }
 
         bool IsFeatureBundle(ui32 featureId) const {
-            CB_ENSURE(featureId < Cursor);
+            CB_ENSURE(featureId < Cursor, "Unexpected feature id " << featureId << ", should be less than " << Cursor);
             return FeatureManagerIdToExclusiveBundleId.contains(featureId);
         }
 
@@ -312,12 +314,16 @@ namespace NCatboostCuda {
                 CB_ENSURE_INTERNAL(IsCat(idx), "Unknown cat feature");
                 maxCtrUniqueValues *= GetUniqueValuesCounts(idx).OnAll;
             }
-            return maxCtrUniqueValues;
+            return Min(maxCtrUniqueValues, MaxObjectsCount);
         }
 
         ui32 GetMaxCtrUniqueValues(ui32 idx) const {
             CB_ENSURE_INTERNAL(InverseCtrs.contains(idx), "Unknown ctr idx");
             return GetMaxCtrUniqueValues(InverseCtrs[idx]);
+        }
+
+        bool UseShuffle() const {
+            return EnableShuffling;
         }
 
     private:
@@ -435,12 +441,14 @@ namespace NCatboostCuda {
         mutable TMap<ui32, NCB::TEstimatedFeatureId> FeatureManagerIdToEstimatedFeatureId;
 
         mutable ui32 Cursor = 0;
+        const ui32 MaxObjectsCount;
 
         mutable TVector<NCatboostOptions::TBinarizationOptions> CtrBinarizationOptions;
 
         TVector<float> TargetBorders;
         const NCatboostOptions::TCatFeatureParams& CatFeatureOptions;
 
+        bool EnableShuffling = true;
 
         // for ctr features and float features
         THashMap<ui32, TVector<float>> Borders;

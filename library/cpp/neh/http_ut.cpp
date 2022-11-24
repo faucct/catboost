@@ -3,11 +3,9 @@
 #include "neh.h"
 #include "rpc.h"
 
-#include "factory.h"
 #include "https.h"
 
 #include <library/cpp/testing/unittest/registar.h>
-#include <library/cpp/testing/unittest/env.h>
 #include <library/cpp/testing/unittest/tests_data.h>
 
 #include <util/generic/buffer.h>
@@ -15,7 +13,6 @@
 #include <util/network/socket.h>
 #include <util/stream/str.h>
 #include <util/string/builder.h>
-#include <util/system/platform.h>
 #include <util/generic/scope.h>
 
 using namespace NNeh;
@@ -107,6 +104,23 @@ Y_UNIT_TEST_SUITE(NehHttp) {
         }
 
         return response;
+    }
+
+    Y_UNIT_TEST(TTestAnyHttpCodeIsAccepted) {
+        auto responseWith523 = [](const IRequestRef& req) {
+            auto* httpReq = dynamic_cast<IHttpRequest*>(req.Get());
+
+            TData data;
+            httpReq->SendReply(data, {}, 523);
+        };
+
+        TServ serv = CreateServices(responseWith523);
+        NNeh::THandleRef handle = NNeh::Request(TStringBuilder() << "http://localhost:" << serv.ServerPort << "/pipeline?", nullptr);
+        auto resp = handle->Wait();
+
+        UNIT_ASSERT(resp);
+        UNIT_ASSERT(resp->IsError());
+        UNIT_ASSERT_EQUAL(resp->GetErrorCode(), 523);
     }
 
     Y_UNIT_TEST(TPipelineRequests) {

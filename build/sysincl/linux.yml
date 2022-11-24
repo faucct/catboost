@@ -6,6 +6,7 @@
   - argp.h
   - argz.h
   - bfd.h
+  - bits/endian.h
   - bits/fenv.h
   - bits/libc-lock.h
   - bits/reg.h
@@ -36,16 +37,6 @@
   - obstack.h
   - printf.h
   - regexp.h
-  - rpc/auth.h
-  - rpc/clnt.h
-  - rpc/netdb.h
-  - rpc/pmap_clnt.h
-  - rpc/rpc.h
-  - rpc/rpc_msg.h
-  - rpc/svc.h
-  - rpc/svc_auth.h
-  - rpc/types.h
-  - rpc/xdr.h
   - rpcsvc/yp_prot.h
   - rpcsvc/ypclnt.h
   - sgtty.h
@@ -61,3 +52,15 @@
   - ttyent.h
   - ustat.h
   - xlocale.h
+
+- source_filter: "^contrib/libs/webrtc/modules"
+  includes:
+    - jni.h
+    - aaudio/AAudio.h
+    - SLES/OpenSLES.h
+    - SLES/OpenSLES_Android.h
+    - SLES/OpenSLES_AndroidConfiguration.h
+
+- source_filter: "^contrib/python/(gevent|greenlet)"
+  includes:
+  - internal/pycore_frame.h

@@ -1,9 +1,26 @@
 LIBRARY()
 
+# Part of compiler-rt LLVM subproject
+
+# git repository: https://github.com/llvm/llvm-project.git
+# directory: compiler-rt/lib/builtins
+# revision: 08f0372c351a57b01afee6c64066961203da28c5
+
+# os_version_check.c was taken from revision 81b89fd7bdddb7da66f2cdace97d6ede5f99d58a
+# os_version_check.c was patched from git repository https://github.com/apple/llvm-project.git revision a02454b91d2aec347b9ce03020656c445f3b2841
+
 LICENSE(
-    MIT
-    BSD
+    Apache-2.0 AND
+    Apache-2.0 WITH LLVM-exception AND
+    MIT AND
+    NCSA
 )
+
+LICENSE_TEXTS(.yandex_meta/licenses.list.txt)
+
+VERSION(2016-03-03-08f0372c351a57b01afee6c64066961203da28c5)
+
+ORIGINAL_SOURCE(https://github.com/llvm/llvm-project)
 
 
 
@@ -22,8 +39,11 @@ IF (MUSL)
 ENDIF()
 
 NO_UTIL()
+
 NO_RUNTIME()
+
 NO_PLATFORM()
+
 NO_COMPILER_WARNINGS()
 
 IF (GCC OR CLANG)
@@ -33,7 +53,6 @@ IF (GCC OR CLANG)
     # as they contain unresolved symbols. But code generation is already done,
     # object files actually are not ELFs but an LLVM bytecode and we get
     # "member at xxxxx is not an ELF object" errors from the linker.
-
     # Just generate native code from the beginning.
     DISABLE(USE_LTO)
 ENDIF()
@@ -58,6 +77,7 @@ SRCS(
     fixunssfti.c
     fixunstfdi.c
     fixunstfsi.c
+    fixunstfti.c
     fixunsxfti.c
     floatditf.c
     floatsitf.c
@@ -85,8 +105,10 @@ SRCS(
     umodti3.c
 )
 
-IF (OS_DARWIN)
-    SRCS(os_version_check.c)
+IF (OS_DARWIN OR OS_IOS)
+    SRCS(
+        os_version_check.c
+    )
 ENDIF()
 
 IF (ARCH_ARM)

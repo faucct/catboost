@@ -7,6 +7,7 @@
 #include "split.h"
 
 #include <catboost/private/libs/algo_helpers/custom_objective_descriptor.h>
+#include <catboost/private/libs/algo_helpers/scratch_cache.h>
 #include <catboost/libs/data/data_provider.h>
 #include <catboost/libs/data/features_layout.h>
 #include <catboost/libs/helpers/restorable_rng.h>
@@ -70,6 +71,11 @@ struct TLearnProgress {
      */
     bool IsFoldsAndApproxDataValid = true;
 
+    /* used to update AveragingFold faster
+     * if AveragingFold is not permuted, we do not use its LearnPermutation
+     */
+    bool IsAveragingFoldPermuted = false;
+
     /* used for training continuation
      * if FoldCreationParamsCheckSum is the same it means Folds and AveragingFold can be reused for
      * training continuation (although Target-related data is updated)
@@ -88,7 +94,7 @@ struct TLearnProgress {
 
     TString SerializedTrainParams; // TODO(kirillovs): do something with this field
 
-    TVector<TVariant<TSplitTree, TNonSymmetricTreeStructure>> TreeStruct;
+    TVector<std::variant<TSplitTree, TNonSymmetricTreeStructure>> TreeStruct;
     TVector<TTreeStats> TreeStats;
     TVector<TVector<TVector<double>>> LeafValues; // [numTree][dim][bucketId]
     /* Vector of multipliers that were applied to approxes at each iteration.
@@ -225,6 +231,8 @@ public:
     TBucketStatsCache PrevTreeLevelStats;
     TProfileInfo Profile;
 
+    NCB::TScratchCache ScratchCache;
+
 private:
     bool UseTreeLevelCachingFlag;
     bool HasWeights;
@@ -234,3 +242,5 @@ bool NeedToUseTreeLevelCaching(
     const NCatboostOptions::TCatBoostOptions& params,
     ui32 maxBodyTailCount,
     ui32 approxDimension);
+
+bool UseAveragingFoldAsFoldZero(const TLearnContext& ctx);

@@ -6,7 +6,13 @@
 #include <util/system/rwlock.h>
 
 namespace NPrivate {
-    template <class Key, class Value, template <class, class> class List, class... TArgs>
+    // We are interested in getters promotion policy _here_ because of Read-Write-Lock optimizations.
+    enum class EGettersPromotionPolicy {
+        Promoted,   // LRU, TLRU, MRU, etc.
+        Unpromoted  // FIFO, LIFO, LW, etc.
+    };
+
+    template <class Key, class Value, template <class, class> class List, EGettersPromotionPolicy GettersPromotionPolicy, class... TArgs>
     class TThreadSafeCache {
     public:
         using TPtr = TAtomicSharedPtr<Value>;
@@ -15,7 +21,7 @@ namespace NPrivate {
         public:
             using TKey = Key;
             using TValue = Value;
-            using TOwner = TThreadSafeCache<Key, Value, List, TArgs...>;
+            using TOwner = TThreadSafeCache<Key, Value, List, GettersPromotionPolicy, TArgs...>;
 
         public:
             virtual ~ICallbacks() = default;
@@ -28,6 +34,19 @@ namespace NPrivate {
             : Callbacks(callbacks)
             , Cache(maxSize)
         {
+        }
+
+        bool Insert(const Key& key, const TPtr& value) {
+            if (!Contains(key)) {
+                TWriteGuard w(Mutex);
+                return Cache.Insert(key, value);
+            }
+            return false;
+        }
+
+        void Update(const Key& key, const TPtr& value) {
+            TWriteGuard w(Mutex);
+            Cache.Update(key, value);
         }
 
         const TPtr Get(TArgs... args) const {
@@ -45,12 +64,8 @@ namespace NPrivate {
 
         void Erase(TArgs... args) {
             Key key = Callbacks.GetKey(args...);
-            {
-                TReadGuard r(Mutex);
-                typename TInternalCache::TIterator i = Cache.FindWithoutPromote(key);
-                if (i == Cache.End()) {
-                    return;
-                }
+            if (!Contains(key)) {
+                return;
             }
             TWriteGuard w(Mutex);
             typename TInternalCache::TIterator i = Cache.Find(key);
@@ -58,6 +73,12 @@ namespace NPrivate {
                 return;
             }
             Cache.Erase(i);
+        }
+
+        bool Contains(const Key& key) const {
+            TReadGuard r(Mutex);
+            auto iter = Cache.FindWithoutPromote(key);
+            return iter != Cache.End();
         }
 
         template <class TCallbacks>
@@ -75,15 +96,30 @@ namespace NPrivate {
             return TThreadSafeCacheSingleton<TCallbacks>::Clear();
         }
 
+        size_t GetMaxSize() const {
+            TReadGuard w(Mutex);
+            return Cache.GetMaxSize();
+        }
+
+        void SetMaxSize(size_t newSize) {
+            TWriteGuard w(Mutex);
+            Cache.SetMaxSize(newSize);
+        }
+
     private:
         template <bool AllowNullValues>
         const TPtr GetValue(TArgs... args) const {
             Key key = Callbacks.GetKey(args...);
-            {
-                TReadGuard r(Mutex);
-                typename TInternalCache::TIterator i = Cache.FindWithoutPromote(key);
-                if (i != Cache.End()) {
-                    return i.Value();
+            switch (GettersPromotionPolicy) {
+                case EGettersPromotionPolicy::Promoted:
+                    break;
+                case EGettersPromotionPolicy::Unpromoted: {
+                    TReadGuard r(Mutex);
+                    typename TInternalCache::TIterator i = Cache.FindWithoutPromote(key);
+                    if (i != Cache.End()) {
+                        return i.Value();
+                    }
+                    break;
                 }
             }
             TWriteGuard w(Mutex);
@@ -144,10 +180,22 @@ namespace NPrivate {
         using TListType = TLWList<TKey, TValue, int, TConstWeighter<TValue>>;
 
         template <class TKey, class TValue, class... TArgs>
-        using TCache = TThreadSafeCache<TKey, TValue, TListType, TArgs...>;
+        using TCache = TThreadSafeCache<TKey, TValue, TListType, EGettersPromotionPolicy::Unpromoted, TArgs...>;
+    };
+
+    struct TLRUHelper {
+        template <class TKey, class TValue>
+        using TListType = TLRUList<TKey, TValue>;
+
+        template <class TKey, class TValue, class... TArgs>
+        using TCache = TThreadSafeCache<TKey, TValue, TListType, EGettersPromotionPolicy::Promoted, TArgs...>;
     };
 
 }
 
 template <class TKey, class TValue, class... TArgs>
 using TThreadSafeCache = typename NPrivate::TLWHelper::template TCache<TKey, TValue, TArgs...>;
+
+template <class TKey, class TValue, class... TArgs>
+using TThreadSafeLRUCache = typename NPrivate::TLRUHelper::template TCache<TKey, TValue, TArgs...>;
+

@@ -126,7 +126,7 @@ struct TOptsParserTester {
 };
 
 namespace {
-    static bool gSimpleFlag = false;
+    bool gSimpleFlag = false;
     void SimpleHander(void) {
         gSimpleFlag = true;
     }
@@ -414,6 +414,40 @@ Y_UNIT_TEST_SUITE(TLastGetoptTests) {
         tester.AcceptError();
     }
 #endif
+
+    Y_UNIT_TEST(TestEqParseOnly) {
+        TOptsParserTester tester;
+
+        tester.Argv_.push_back("cmd");
+        tester.Argv_.push_back("--data=jjhh");
+        tester.Argv_.push_back("-n");
+        tester.Argv_.push_back("11");
+        tester.Argv_.push_back("--optional-number-1=8");
+        tester.Argv_.push_back("--optional-string-1=os1");
+        tester.Argv_.push_back("--optional-number-2");
+        tester.Argv_.push_back("10");
+        tester.Argv_.push_back("--optional-string-2");
+        tester.Argv_.push_back("freearg");
+
+        tester.Opts_.AddLongOption('d', "data");
+        tester.Opts_.AddLongOption('n', "number");
+        tester.Opts_.AddLongOption("optional-string-0");
+        tester.Opts_.AddLongOption("optional-number-0");
+        tester.Opts_.AddLongOption("optional-string-1");
+        tester.Opts_.AddLongOption("optional-number-1");
+        tester.Opts_.AddLongOption("optional-string-2").OptionalArgument().DisableSpaceParse();
+        tester.Opts_.AddLongOption("optional-number-2").OptionalArgument();
+
+        tester.AcceptOptionWithValue("data", "jjhh");
+        tester.AcceptOptionWithValue('n', "11");
+        tester.AcceptOptionWithValue("optional-number-1", "8");
+        tester.AcceptOptionWithValue("optional-string-1", "os1");
+        tester.AcceptOptionWithValue("optional-number-2", "10");
+        tester.AcceptOptionWithoutValue("optional-string-2");
+        tester.AcceptEndOfOptions();
+        tester.AcceptFreeArg("freearg");
+        tester.AcceptEndOfFreeArgs();
+    }
 
     Y_UNIT_TEST(TestStoreResult) {
         TOptsNoDefault opts;
@@ -778,5 +812,42 @@ Y_UNIT_TEST_SUITE(TLastGetoptTests) {
         UNIT_ASSERT_EXCEPTION(
             TOptsParseResultException(&opts, Y_ARRAY_SIZE(argv), argv),
             TUsageException);
+    }
+
+    Y_UNIT_TEST(TestFreeArgsStoreResult) {
+        TOptsNoDefault opts;
+        TString data;
+        int number = 0;
+        opts.AddFreeArgBinding("data", data);
+        opts.AddFreeArgBinding("number", number);
+        TOptsParseResultTestWrapper r(&opts, V({"cmd", "hello", "25"}));
+        UNIT_ASSERT_VALUES_EQUAL("hello", data);
+        UNIT_ASSERT_VALUES_EQUAL(25, number);
+        UNIT_ASSERT_VALUES_EQUAL(2, r.GetFreeArgCount());
+    }
+
+    Y_UNIT_TEST(TestCheckUserTypos) {
+        {
+            TOptsNoDefault opts;
+            opts.SetCheckUserTypos();
+            opts.AddLongOption("from");
+            opts.AddLongOption("to");
+
+            UNIT_ASSERT_EXCEPTION(
+                    TOptsParseResultTestWrapper(&opts, V({"copy", "-from", "/home", "--to=/etc"})),
+                    TUsageException);
+            UNIT_ASSERT_NO_EXCEPTION(
+                    TOptsParseResultTestWrapper(&opts, V({"copy", "--from", "from", "--to=/etc"})));
+        }
+
+        {
+            TOptsNoDefault opts;
+            opts.SetCheckUserTypos();
+            opts.AddLongOption('f', "file", "");
+            opts.AddLongOption('r', "read", "");
+            opts.AddLongOption("fr");
+            UNIT_ASSERT_NO_EXCEPTION(
+                    TOptsParseResultTestWrapper(&opts, V({"copy", "-fr"})));
+        }
     }
 }

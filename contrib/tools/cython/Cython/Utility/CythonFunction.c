@@ -426,7 +426,8 @@ static PyObject *
 __Pyx_CyFunction_reduce(__pyx_CyFunctionObject *m, CYTHON_UNUSED PyObject *args)
 {
 #if PY_MAJOR_VERSION >= 3
-    return PyUnicode_FromString(m->func.m_ml->ml_name);
+    Py_INCREF(m->func_qualname);
+    return m->func_qualname;
 #else
     return PyString_FromString(m->func.m_ml->ml_name);
 #endif
@@ -660,6 +661,13 @@ static PyObject *__Pyx_CyFunction_CallAsMethod(PyObject *func, PyObject *args, P
         self = PyTuple_GetItem(args, 0);
         if (unlikely(!self)) {
             Py_DECREF(new_args);
+            PyErr_Format(PyExc_TypeError,
+                         "unbound method %.200s() needs an argument",
+#if PY_MAJOR_VERSION >= 3
+                         cyfunc->func_qualname);
+#else
+                         PyString_AsString(cyfunc->func_qualname));
+#endif
             return NULL;
         }
 
@@ -730,11 +738,14 @@ static PyTypeObject __pyx_CyFunctionType_type = {
 #if PY_VERSION_HEX >= 0x030400a1
     0,                                  /*tp_finalize*/
 #endif
-#if PY_VERSION_HEX >= 0x030800b1
+#if PY_VERSION_HEX >= 0x030800b1 && (!CYTHON_COMPILING_IN_PYPY || PYPY_VERSION_NUM >= 0x07030800)
     0,                                  /*tp_vectorcall*/
 #endif
 #if PY_VERSION_HEX >= 0x030800b4 && PY_VERSION_HEX < 0x03090000
     0,                                  /*tp_print*/
+#endif
+#if CYTHON_COMPILING_IN_PYPY && PY_VERSION_HEX >= 0x03090000
+    0,                                          /*tp_pypy_flags*/
 #endif
 };
 
@@ -1136,7 +1147,7 @@ __pyx_FusedFunction_call(PyObject *func, PyObject *args, PyObject *kw)
             PyErr_Format(PyExc_TypeError,
                          "First argument should be of type %.200s, got %.200s.",
                          ((PyTypeObject *) binding_func->type)->tp_name,
-                         self->ob_type->tp_name);
+                         Py_TYPE(self)->tp_name);
             goto bad;
         } else if (unlikely(is_instance == -1)) {
             goto bad;
@@ -1259,11 +1270,14 @@ static PyTypeObject __pyx_FusedFunctionType_type = {
 #if PY_VERSION_HEX >= 0x030400a1
     0,                                  /*tp_finalize*/
 #endif
-#if PY_VERSION_HEX >= 0x030800b1
+#if PY_VERSION_HEX >= 0x030800b1 && (!CYTHON_COMPILING_IN_PYPY || PYPY_VERSION_NUM >= 0x07030800)
     0,                                  /*tp_vectorcall*/
 #endif
 #if PY_VERSION_HEX >= 0x030800b4 && PY_VERSION_HEX < 0x03090000
     0,                                  /*tp_print*/
+#endif
+#if CYTHON_COMPILING_IN_PYPY && PY_VERSION_HEX >= 0x03090000
+    0,                                          /*tp_pypy_flags*/
 #endif
 };
 

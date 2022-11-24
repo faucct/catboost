@@ -97,9 +97,10 @@ namespace NCatboostCuda {
                                                                                                                              new TPermutationScope(),
                                                                                                                              *dataSetsHolder.LearnCatFeaturesDataSet,
                                                                                                                              dataSetsHolder.GetCtrTargets(),
-                                                                                                                             TTarget<NCudaLib::TMirrorMapping>(std::move(targets),
-                                                                                                                                                               std::move(weights),
-                                                                                                                                                               std::move(indices)),
+                                                                                                                             TTarget<NCudaLib::TMirrorMapping>(targets.AsConstBuf(),
+                                                                                                                                                               weights.AsConstBuf(),
+                                                                                                                                                               indices.AsConstBuf(),
+                                                                                                                                                               /*isPairWeights*/ false),
                                                                                                                              std::move(inverseIndices),
                                                                                                                              std::move(permutation)));
         }
@@ -176,8 +177,7 @@ namespace NCatboostCuda {
                                                                                       compressedIndexBuilder,
                                                                                       DataProvider,
                                                                                       permutationIndependentCompressedDataSetId,
-                                                                                      /*skipExclusiveBundles=*/ false,
-                                                                                      localExecutor);
+                                                                                      /*skipExclusiveBundles=*/ false);
             floatFeaturesWriter.Write(permutationIndependent);
         }
 
@@ -186,8 +186,7 @@ namespace NCatboostCuda {
                                                                                       compressedIndexBuilder,
                                                                                       *LinkedTest,
                                                                                       testDataSetId,
-                                                                                      /*skipExclusiveBundles=*/ true,
-                                                                                      localExecutor);
+                                                                                      /*skipExclusiveBundles=*/ true);
             floatFeaturesWriter.Write(permutationIndependent);
         }
 
@@ -302,9 +301,10 @@ namespace NCatboostCuda {
                                                                      new TPermutationScope(),
                                                                      *dataSetsHolder.TestCatFeaturesDataSet,
                                                                      dataSetsHolder.GetCtrTargets(),
-                                                                     TTarget<NCudaLib::TMirrorMapping>(std::move(targets),
-                                                                                                       std::move(weights),
-                                                                                                       std::move(indices)),
+                                                                     TTarget<NCudaLib::TMirrorMapping>(targets.AsConstBuf(),
+                                                                                                       weights.AsConstBuf(),
+                                                                                                       indices.AsConstBuf(),
+                                                                                                       /*isPairWeights*/ false),
                                                                      std::move(inverseIndices),
                                                                      GetPermutation(*LinkedTest, 0u, 1u))
 

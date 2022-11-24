@@ -27,15 +27,15 @@
         if (!stricmp((header).Name().data(), str))
 
 namespace {
-    static inline size_t SuggestBufferSize() {
+    inline size_t SuggestBufferSize() {
         return 8192;
     }
 
-    static inline TStringBuf Trim(const char* b, const char* e) noexcept {
+    inline TStringBuf Trim(const char* b, const char* e) noexcept {
         return StripString(TStringBuf(b, e));
     }
 
-    static inline TStringBuf RmSemiColon(const TStringBuf& s) {
+    inline TStringBuf RmSemiColon(const TStringBuf& s) {
         return s.Before(';');
     }
 
@@ -274,12 +274,9 @@ private:
     }
 
     inline bool IsRequest() const {
-        return strnicmp(FirstLine().data(), "get", 3) == 0 ||
-               strnicmp(FirstLine().data(), "post", 4) == 0 ||
-               strnicmp(FirstLine().data(), "put", 3) == 0 ||
-               strnicmp(FirstLine().data(), "patch", 5) == 0 ||
-               strnicmp(FirstLine().data(), "head", 4) == 0 ||
-               strnicmp(FirstLine().data(), "delete", 6) == 0;
+        // https://datatracker.ietf.org/doc/html/rfc7231#section-4
+        // more rare methods: https://www.iana.org/assignments/http-methods/http-methods.xhtml
+        return EqualToOneOf(to_lower(FirstLine().substr(0, FirstLine().find(" "))), "get", "post", "put", "head", "delete", "connect", "options", "trace", "patch");
     }
 
     inline void BuildInputChain() {
@@ -323,6 +320,7 @@ private:
                         p.KeepAlive = false;
                     }
                 }
+                [[fallthrough]];
                 HEADERCMP(header, "expect") {
                     auto findContinue = [&](const TStringBuf& s) {
                         if (strnicmp(s.data(), "100-continue", 13) == 0) {

@@ -1,9 +1,16 @@
+/*
+Copyright (c) 2020, PyData Development Team
+All rights reserved.
+Distributed under the terms of the BSD Simplified License.
+The full license is in the LICENSE file, distributed with this software.
+*/
+
 // Conversion routines that are useful for serialization,
 // but which don't interact with JSON objects directly
 
 #include "date_conversions.h"
-#include <../../../tslibs/src/datetime/np_datetime.h>
-#include <../../../tslibs/src/datetime/np_datetime_strings.h>
+#include "../../../tslibs/src/datetime/np_datetime.h"
+#include "../../../tslibs/src/datetime/np_datetime_strings.h"
 
 /*
  * Function: scaleNanosecToUnit
@@ -47,8 +54,8 @@ char *int64ToIso(int64_t value, NPY_DATETIMEUNIT base, size_t *len) {
         PyErr_NoMemory();
         return NULL;
     }
-
-    ret_code = make_iso_8601_datetime(&dts, result, *len, base);
+    // datetime64 is always naive
+    ret_code = make_iso_8601_datetime(&dts, result, *len, 0, base);
     if (ret_code != 0) {
         PyErr_SetString(PyExc_ValueError,
                         "Could not convert datetime value to string");
@@ -83,7 +90,19 @@ char *PyDateTimeToIso(PyObject *obj, NPY_DATETIMEUNIT base,
 
     *len = (size_t)get_datetime_iso_8601_strlen(0, base);
     char *result = PyObject_Malloc(*len);
-    ret = make_iso_8601_datetime(&dts, result, *len, base);
+    // Check to see if PyDateTime has a timezone.
+    // Don't convert to UTC if it doesn't.
+    int is_tz_aware = 0;
+    if (PyObject_HasAttrString(obj, "tzinfo")) {
+        PyObject *offset = extract_utc_offset(obj);
+        if (offset == NULL) {
+            PyObject_Free(result);
+            return NULL;
+        }
+        is_tz_aware = offset != Py_None;
+        Py_DECREF(offset);
+    }
+    ret = make_iso_8601_datetime(&dts, result, *len, is_tz_aware, base);
 
     if (ret != 0) {
         PyErr_SetString(PyExc_ValueError,
@@ -108,8 +127,8 @@ npy_datetime PyDateTimeToEpoch(PyObject *dt, NPY_DATETIMEUNIT base) {
             PyErr_SetString(PyExc_ValueError,
                             "Could not convert PyDateTime to numpy datetime");
         }
-        // TODO: is setting errMsg required?
-        //((JSONObjectEncoder *)tc->encoder)->errorMsg = "";
+        // TODO(username): is setting errMsg required?
+        // ((JSONObjectEncoder *)tc->encoder)->errorMsg = "";
         // return NULL;
     }
 

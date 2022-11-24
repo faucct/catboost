@@ -7,10 +7,15 @@
 #include "typetraits.h"
 #include "singleton.h"
 
+#include <type_traits>
 #include <utility>
 
-#include <util/system/yassert.h>
+#include <util/system/compiler.h>
 #include <util/system/defaults.h>
+#include <util/system/yassert.h>
+
+template <class T, class U>
+using TGuardConversion = typename std::enable_if_t<std::is_convertible<U*, T*>::value>;
 
 template <class T>
 inline void AssertTypeComplete() {
@@ -95,14 +100,6 @@ private:
     static void DoDestroy(void* t) noexcept;
 };
 
-template <class D>
-struct TDestroyFunctor {
-    template <class T>
-    inline void operator()(T* t) const noexcept {
-        D::Destroy(t);
-    }
-};
-
 template <class Base, class T>
 class TPointerCommon {
 public:
@@ -114,7 +111,7 @@ public:
         return ptr;
     }
 
-    #ifndef __cpp_impl_three_way_comparison
+#ifndef __cpp_impl_three_way_comparison
     template <class C>
     inline bool operator==(const C& p) const noexcept {
         return (p == AsT());
@@ -124,7 +121,7 @@ public:
     inline bool operator!=(const C& p) const noexcept {
         return (p != AsT());
     }
-    #endif
+#endif
 
     inline explicit operator bool() const noexcept {
         return nullptr != AsT();
@@ -194,14 +191,14 @@ public:
         return this->DoRelease(T_);
     }
 
-    inline void Reset(T* t) noexcept {
+    Y_REINITIALIZES_OBJECT inline void Reset(T* t) noexcept {
         if (T_ != t) {
             DoDestroy();
             T_ = t;
         }
     }
 
-    inline void Reset() noexcept {
+    Y_REINITIALIZES_OBJECT inline void Reset() noexcept {
         Destroy();
     }
 
@@ -217,12 +214,12 @@ public:
         return T_;
     }
 
-    #ifdef __cpp_impl_three_way_comparison
+#ifdef __cpp_impl_three_way_comparison
     template <class Other>
     inline bool operator==(const Other& p) const noexcept {
         return (p == Get());
     }
-    #endif
+#endif
 private:
     inline void DoDestroy() noexcept {
         if (T_) {
@@ -247,7 +244,7 @@ public:
     {
     }
 
-    inline THolder(T* t) noexcept
+    explicit THolder(T* t) noexcept
         : T_(t)
     {
     }
@@ -257,7 +254,7 @@ public:
     {
     }
 
-    template <class U>
+    template <class U, class = TGuardConversion<T, U>>
     inline THolder(TAutoPtr<U, D> t) noexcept
         : T_(t.Release())
     {
@@ -268,7 +265,7 @@ public:
     {
     }
 
-    template <class U>
+    template <class U, class = TGuardConversion<T, U>>
     inline THolder(THolder<U, D>&& that) noexcept
         : T_(that.Release())
     {
@@ -289,18 +286,18 @@ public:
         return this->DoRelease(T_);
     }
 
-    inline void Reset(T* t) noexcept {
+    Y_REINITIALIZES_OBJECT inline void Reset(T* t) noexcept {
         if (T_ != t) {
             DoDestroy();
             T_ = t;
         }
     }
 
-    inline void Reset(TAutoPtr<T, D> t) noexcept {
+    Y_REINITIALIZES_OBJECT inline void Reset(TAutoPtr<T, D> t) noexcept {
         Reset(t.Release());
     }
 
-    inline void Reset() noexcept {
+    Y_REINITIALIZES_OBJECT inline void Reset() noexcept {
         Destroy();
     }
 
@@ -332,12 +329,12 @@ public:
         return *this;
     }
 
-    #ifdef __cpp_impl_three_way_comparison
+#ifdef __cpp_impl_three_way_comparison
     template <class Other>
     inline bool operator==(const Other& p) const noexcept {
         return (p == Get());
     }
-    #endif
+#endif
 private:
     inline void DoDestroy() noexcept {
         if (T_) {
@@ -350,8 +347,8 @@ private:
 };
 
 template <typename T, typename... Args>
-THolder<T> MakeHolder(Args&&... args) {
-    return new T(std::forward<Args>(args)...);
+[[nodiscard]] THolder<T> MakeHolder(Args&&... args) {
+    return THolder<T>(new T(std::forward<Args>(args)...));
 }
 
 /*
@@ -370,7 +367,7 @@ public:
 
     inline ~TRefCounted() = default;
 
-    inline void Ref(TAtomicBase d) noexcept {
+    inline void Ref(intptr_t d) noexcept {
         auto resultCount = Counter_.Add(d);
         Y_ASSERT(resultCount >= d);
         (void)resultCount;
@@ -382,7 +379,7 @@ public:
         (void)resultCount;
     }
 
-    inline void UnRef(TAtomicBase d) noexcept {
+    inline void UnRef(intptr_t d) noexcept {
         auto resultCount = Counter_.Sub(d);
         Y_ASSERT(resultCount >= 0);
         if (resultCount == 0) {
@@ -394,7 +391,7 @@ public:
         UnRef(1);
     }
 
-    inline TAtomicBase RefCount() const noexcept {
+    inline intptr_t RefCount() const noexcept {
         return Counter_.Val();
     }
 
@@ -480,13 +477,27 @@ public:
 
 template <class T, class Ops>
 class TIntrusivePtr: public TPointerBase<TIntrusivePtr<T, Ops>, T> {
-    friend class TIntrusiveConstPtr<T, Ops>;
+    template <class U, class O>
+    friend class TIntrusivePtr;
+
+    template <class U, class O>
+    friend class TIntrusiveConstPtr;
+
 public:
+    struct TNoIncrement {
+    };
+
     inline TIntrusivePtr(T* t = nullptr) noexcept
         : T_(t)
     {
         Ops();
         Ref();
+    }
+
+    inline TIntrusivePtr(T* t, TNoIncrement) noexcept
+        : T_(t)
+    {
+        Ops();
     }
 
     inline ~TIntrusivePtr() {
@@ -508,11 +519,18 @@ public:
     //     void Func(TIntrusivePtr<B>);
     //     ...
     //     Func(TIntrusivePtr<A>(new A)); // <--- compiler can't decide which version of Func to use
-    template <class U>
-    inline TIntrusivePtr(const TIntrusivePtr<U>& p, std::enable_if_t<std::is_convertible<U*, T*>::value>* = nullptr) noexcept
+    template <class U, class = TGuardConversion<T, U>>
+    inline TIntrusivePtr(const TIntrusivePtr<U>& p) noexcept
         : T_(p.Get())
     {
         Ref();
+    }
+
+    template <class U, class = TGuardConversion<T, U>>
+    inline TIntrusivePtr(TIntrusivePtr<U>&& p) noexcept
+        : T_(p.T_)
+    {
+        p.T_ = nullptr;
     }
 
     inline TIntrusivePtr(TIntrusivePtr&& p) noexcept
@@ -530,11 +548,11 @@ public:
     // Effectively replace both:
     // Reset(const TIntrusivePtr&)
     // Reset(TIntrusivePtr&&)
-    inline void Reset(TIntrusivePtr t) noexcept {
+    Y_REINITIALIZES_OBJECT inline void Reset(TIntrusivePtr t) noexcept {
         Swap(t);
     }
 
-    inline void Reset() noexcept {
+    Y_REINITIALIZES_OBJECT inline void Reset() noexcept {
         Drop();
     }
 
@@ -563,12 +581,12 @@ public:
         return T_ ? Ops::RefCount(T_) : 0;
     }
 
-    #ifdef __cpp_impl_three_way_comparison
+#ifdef __cpp_impl_three_way_comparison
     template <class Other>
     inline bool operator==(const Other& p) const noexcept {
         return (p == Get());
     }
-    #endif
+#endif
 private:
     inline void Ref() noexcept {
         if (T_) {
@@ -587,7 +605,7 @@ private:
 };
 
 template <class T, class Ops>
-struct THash<TIntrusivePtr<T, Ops>> : THash<const T*> {
+struct THash<TIntrusivePtr<T, Ops>>: THash<const T*> {
     using THash<const T*>::operator();
     inline size_t operator()(const TIntrusivePtr<T, Ops>& ptr) const {
         return THash<const T*>::operator()(ptr.Get());
@@ -621,17 +639,24 @@ public:
         Swap(p);
     }
 
-    inline TIntrusiveConstPtr(TIntrusivePtr<T, Ops> p) noexcept
-        : T_(nullptr)
+    inline TIntrusiveConstPtr(TIntrusivePtr<T> p) noexcept
+        : T_(p.T_)
     {
-        DoSwap(T_, p.T_);
+        p.T_ = nullptr;
     }
 
-    template <class U>
-    inline TIntrusiveConstPtr(const TIntrusiveConstPtr<U>& p, std::enable_if_t<std::is_convertible<U*, T*>::value>* = nullptr) noexcept
+    template <class U, class = TGuardConversion<T, U>>
+    inline TIntrusiveConstPtr(const TIntrusiveConstPtr<U>& p) noexcept
         : T_(p.T_)
     {
         Ref();
+    }
+
+    template <class U, class = TGuardConversion<T, U>>
+    inline TIntrusiveConstPtr(TIntrusiveConstPtr<U>&& p) noexcept
+        : T_(p.T_)
+    {
+        p.T_ = nullptr;
     }
 
     inline TIntrusiveConstPtr& operator=(TIntrusiveConstPtr p) noexcept {
@@ -643,11 +668,11 @@ public:
     // Effectively replace both:
     // Reset(const TIntrusiveConstPtr&)
     // Reset(TIntrusiveConstPtr&&)
-    inline void Reset(TIntrusiveConstPtr t) noexcept {
+    Y_REINITIALIZES_OBJECT inline void Reset(TIntrusiveConstPtr t) noexcept {
         Swap(t);
     }
 
-    inline void Reset() noexcept {
+    Y_REINITIALIZES_OBJECT inline void Reset() noexcept {
         Drop();
     }
 
@@ -667,12 +692,12 @@ public:
         return T_ ? Ops::RefCount(T_) : 0;
     }
 
-    #ifdef __cpp_impl_three_way_comparison
+#ifdef __cpp_impl_three_way_comparison
     template <class Other>
     inline bool operator==(const Other& p) const noexcept {
         return (p == Get());
     }
-    #endif
+#endif
 private:
     inline void Ref() noexcept {
         if (T_ != nullptr) {
@@ -694,7 +719,7 @@ private:
 };
 
 template <class T, class Ops>
-struct THash<TIntrusiveConstPtr<T, Ops>> : THash<const T*> {
+struct THash<TIntrusiveConstPtr<T, Ops>>: THash<const T*> {
     using THash<const T*>::operator();
     inline size_t operator()(const TIntrusiveConstPtr<T, Ops>& ptr) const {
         return THash<const T*>::operator()(ptr.Get());
@@ -756,12 +781,12 @@ template <class T, class Ops>
 typename TSimpleIntrusiveOps<T, Ops>::TFunc TSimpleIntrusiveOps<T, Ops>::UnRef_ = nullptr;
 
 template <typename T, class Ops = TDefaultIntrusivePtrOps<T>, typename... Args>
-TIntrusivePtr<T, Ops> MakeIntrusive(Args&&... args) {
+[[nodiscard]] TIntrusivePtr<T, Ops> MakeIntrusive(Args&&... args) {
     return new T{std::forward<Args>(args)...};
 }
 
 template <typename T, class Ops = TDefaultIntrusivePtrOps<T>, typename... Args>
-TIntrusiveConstPtr<T, Ops> MakeIntrusiveConst(Args&&... args) {
+[[nodiscard]] TIntrusiveConstPtr<T, Ops> MakeIntrusiveConst(Args&&... args) {
     return new T{std::forward<Args>(args)...};
 }
 
@@ -793,7 +818,7 @@ public:
     {
     }
 
-    template <class TT>
+    template <class TT, class = TGuardConversion<T, TT>>
     inline TSharedPtr(THolder<TT>&& t) {
         Init(t);
     }
@@ -816,12 +841,21 @@ public:
         Swap(t);
     }
 
-    template <class TT>
+    template <class TT, class = TGuardConversion<T, TT>>
     inline TSharedPtr(const TSharedPtr<TT, C, D>& t) noexcept
         : T_(t.T_)
         , C_(t.C_)
     {
         Ref();
+    }
+
+    template <class TT, class = TGuardConversion<T, TT>>
+    inline TSharedPtr(TSharedPtr<TT, C, D>&& t) noexcept
+        : T_(t.T_)
+        , C_(t.C_)
+    {
+        t.T_ = nullptr;
+        t.C_ = nullptr;
     }
 
     inline TSharedPtr& operator=(TSharedPtr t) noexcept {
@@ -833,11 +867,11 @@ public:
     // Effectively replace both:
     // Reset(const TSharedPtr& t)
     // Reset(TSharedPtr&& t)
-    inline void Reset(TSharedPtr t) noexcept {
+    Y_REINITIALIZES_OBJECT inline void Reset(TSharedPtr t) noexcept {
         Swap(t);
     }
 
-    inline void Reset() noexcept {
+    Y_REINITIALIZES_OBJECT inline void Reset() noexcept {
         Drop();
     }
 
@@ -862,12 +896,30 @@ public:
         return C_ ? C_->Val() : 0;
     }
 
-    #ifdef __cpp_impl_three_way_comparison
+    template <class TT>
+    [[nodiscard]] inline TSharedPtr<TT, C, D> As() & noexcept {
+        static_assert(std::has_virtual_destructor<TT>(), "Type should have a virtual dtor");
+        static_assert(std::is_base_of<T, TT>(), "When downcasting from T to TT, T should be a parent of TT");
+        Ref();
+        return TSharedPtr<TT, C, D>(dynamic_cast<TT*>(T_), C_);
+    }
+
+    template <class TT>
+    [[nodiscard]] inline TSharedPtr<TT, C, D> As() && noexcept {
+        static_assert(std::has_virtual_destructor<TT>(), "Type should have a virtual dtor");
+        static_assert(std::is_base_of<T, TT>(), "When downcasting from T to TT, T should be a parent of TT");
+        auto resultPtr = TSharedPtr<TT, C, D>(dynamic_cast<TT*>(T_), C_);
+        T_ = nullptr;
+        C_ = nullptr;
+        return resultPtr;
+    }
+
+#ifdef __cpp_impl_three_way_comparison
     template <class Other>
     inline bool operator==(const Other& p) const noexcept {
         return (p == Get());
     }
-    #endif
+#endif
 private:
     template <class X>
     inline void Init(X& t) {
@@ -901,7 +953,7 @@ private:
 };
 
 template <class T, class C, class D>
-struct THash<TSharedPtr<T, C, D>> : THash<const T*> {
+struct THash<TSharedPtr<T, C, D>>: THash<const T*> {
     using THash<const T*>::operator();
     inline size_t operator()(const TSharedPtr<T, C, D>& ptr) const {
         return THash<const T*>::operator()(ptr.Get());
@@ -916,17 +968,17 @@ template <class T, class D = TDelete>
 using TSimpleSharedPtr = TSharedPtr<T, TSimpleCounter, D>;
 
 template <typename T, typename C, typename... Args>
-TSharedPtr<T, C> MakeShared(Args&&... args) {
+[[nodiscard]] TSharedPtr<T, C> MakeShared(Args&&... args) {
     return new T{std::forward<Args>(args)...};
 }
 
 template <typename T, typename... Args>
-inline TAtomicSharedPtr<T> MakeAtomicShared(Args&&... args) {
+[[nodiscard]] inline TAtomicSharedPtr<T> MakeAtomicShared(Args&&... args) {
     return MakeShared<T, TAtomicCounter>(std::forward<Args>(args)...);
 }
 
 template <typename T, typename... Args>
-inline TSimpleSharedPtr<T> MakeSimpleShared(Args&&... args) {
+[[nodiscard]] inline TSimpleSharedPtr<T> MakeSimpleShared(Args&&... args) {
     return MakeShared<T, TSimpleCounter>(std::forward<Args>(args)...);
 }
 
@@ -973,7 +1025,7 @@ public:
         DoDestroy();
     }
 
-    inline TCopyPtr& operator=(TCopyPtr t) {
+    inline TCopyPtr& operator=(TCopyPtr t) noexcept {
         t.Swap(*this);
 
         return *this;
@@ -983,14 +1035,14 @@ public:
         return DoRelease(T_);
     }
 
-    inline void Reset(T* t) noexcept {
+    Y_REINITIALIZES_OBJECT inline void Reset(T* t) noexcept {
         if (T_ != t) {
             DoDestroy();
             T_ = t;
         }
     }
 
-    inline void Reset() noexcept {
+    Y_REINITIALIZES_OBJECT inline void Reset() noexcept {
         Destroy();
     }
 
@@ -1006,12 +1058,12 @@ public:
         return T_;
     }
 
-    #ifdef __cpp_impl_three_way_comparison
+#ifdef __cpp_impl_three_way_comparison
     template <class Other>
     inline bool operator==(const Other& p) const noexcept {
         return (p == Get());
     }
-    #endif
+#endif
 private:
     inline void DoDestroy() noexcept {
         if (T_)
@@ -1062,20 +1114,20 @@ public:
         T_.Swap(r.T_);
     }
 
-    inline void Reset(TCowPtr p) {
+    Y_REINITIALIZES_OBJECT inline void Reset(TCowPtr p) {
         p.Swap(*this);
     }
 
-    inline void Reset() {
+    Y_REINITIALIZES_OBJECT inline void Reset() {
         T_.Reset();
     }
 
-    #ifdef __cpp_impl_three_way_comparison
+#ifdef __cpp_impl_three_way_comparison
     template <class Other>
     inline bool operator==(const Other& p) const noexcept {
         return (p == Get());
     }
-    #endif
+#endif
 private:
     inline void Unshare() {
         if (Shared()) {

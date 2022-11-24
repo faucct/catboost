@@ -12,6 +12,7 @@
 
 #include <util/generic/cast.h>
 #include <util/generic/mapfindptr.h>
+#include <util/generic/utility.h>
 #include <util/generic/xrange.h>
 #include <util/stream/output.h>
 
@@ -152,15 +153,19 @@ namespace NCB {
         , PerFloatFeatureQuantization(std::move(perFloatFeatureQuantization))
         , FloatFeaturesAllowNansInTestOnly(floatFeaturesAllowNansInTestOnly)
         , CatFeaturesPerfectHash(featuresLayout.GetCatFeatureCount())
-        , RuntimeTextProcessingOptions(GetAvailableTextFeatureIndices(featuresLayout), textFeaturesProcessing)
         , TextDigitizers()
-        , EmbeddingEstimatorsOptions(GetAvailableEmbeddingFeatureIndices(featuresLayout), embeddingProcessingOptions)
     {
         FeaturesLayout->IgnoreExternalFeatures(ignoredFeatures);
+        RuntimeTextProcessingOptions = NCatboostOptions::TRuntimeTextOptions(GetAvailableTextFeatureIndices(*FeaturesLayout),
+                                                                             textFeaturesProcessing);
+        EmbeddingEstimatorsOptions = NCatboostOptions::TRuntimeEmbeddingOptions(GetAvailableEmbeddingFeatureIndices(*FeaturesLayout),
+                                                                                embeddingProcessingOptions);
     }
 
     void TQuantizedFeaturesInfo::Init(TFeaturesLayout* featuresLayout) {
         FeaturesLayout = MakeIntrusive<TFeaturesLayout>(std::move(*featuresLayout));
+        TCatFeaturesPerfectHash catFeaturesPerfectHash(FeaturesLayout->GetCatFeatureCount());
+        DoSwap(CatFeaturesPerfectHash, catFeaturesPerfectHash);
     }
 
 
@@ -337,6 +342,8 @@ namespace NCB {
         TVector<ENanMode> nanModes;
         TVector<size_t> floatFeatureIndices;
         TVector<size_t> catFeatureIndices;
+        TVector<TMap<ui32, TValueWithCount>> catFeaturesPerfectHash;
+
         for (auto flatFeatureIdx : xrange(featuresLayout->GetExternalFeatureCount())) {
             const auto featureMetaInfo = featuresLayout->GetExternalFeatureMetaInfo(flatFeatureIdx);
             if (featureMetaInfo.Type == EFeatureType::Float) {
@@ -353,6 +360,12 @@ namespace NCB {
                 floatFeatureIndices.push_back(flatFeatureIdx);
             } else if (featureMetaInfo.Type == EFeatureType::Categorical) {
                 catFeatureIndices.push_back(flatFeatureIdx);
+                const auto catFeatureIdx = featuresLayout->GetInternalFeatureIdx<EFeatureType::Categorical>(
+                    flatFeatureIdx
+                );
+                catFeaturesPerfectHash.push_back(
+                    quantizedFeaturesInfo.GetCategoricalFeaturesPerfectHash(catFeatureIdx).ToMap()
+                );
             } else {
                 CB_ENSURE_INTERNAL(
                     false,
@@ -366,7 +379,7 @@ namespace NCB {
             std::move(nanModes),
             classLabels,
             std::move(catFeatureIndices),
-            TVector<TMap<ui32, TValueWithCount>>() // TODO(akhropov): build CatFeaturesPerfectHash
+            std::move(catFeaturesPerfectHash)
         };
     }
 

@@ -1,12 +1,16 @@
 R_MODULE(
     catboostr
 )
-EXPORTS_SCRIPT(catboostr.exports)
+
+IF (NOT OS_WINDOWS)
+    EXPORTS_SCRIPT(catboostr.exports)
+ENDIF()
 
 
 
 SRCS(
     catboostr.cpp
+    init.c
 )
 
 PEERDIR(
@@ -36,10 +40,10 @@ IF (OS_WINDOWS)
     LDFLAGS($CURDIR/R.lib)  # TODO: use EXTRALIBS
 ENDIF()
 
-IF (ARCH_AARCH64 OR OS_WINDOWS)
+IF (OS_WINDOWS)
     ALLOCATOR(J)
 ELSE()
-    ALLOCATOR(LF)
+    ALLOCATOR(MIM)
 ENDIF()
 
 END()

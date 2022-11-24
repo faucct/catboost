@@ -121,9 +121,11 @@ enum class ELossFunction {
     /* regression errors */
 
     RMSE,
+    LogCosh,
     Lq,
     MAE,
     Quantile,
+    MultiQuantile,
     Expectile,
     LogLinQuantile,
     MAPE,
@@ -133,6 +135,7 @@ enum class ELossFunction {
     SMAPE,
     Huber,
     Tweedie,
+    Cox,
 
     RMSEWithUncertainty,
 
@@ -153,12 +156,13 @@ enum class ELossFunction {
     QuerySoftMax,
     QueryCrossEntropy,
     StochasticFilter,
+    LambdaMart,
     StochasticRank,
 
     /* user defined errors */
 
     PythonUserDefinedPerObject,
-    PythonUserDefinedMultiRegression,
+    PythonUserDefinedMultiTarget,
     UserPerObjMetric,
     UserQuerywiseMetric,
 
@@ -179,6 +183,7 @@ enum class ELossFunction {
     Recall,
     F1,
     TotalF1,
+    F,
     MCC,
     ZeroOneLoss,
     HammingLoss,
@@ -196,6 +201,7 @@ enum class ELossFunction {
     /* ranking metrics */
     AverageGain,
     QueryAverage,
+    QueryAUC,
     PFound,
     PrecisionAt,
     RecallAt,
@@ -203,9 +209,19 @@ enum class ELossFunction {
     NDCG,
     DCG,
     FilteredDCG,
+    MRR,
+    ERR,
+
+    /* survival-regression */
+    SurvivalAft,
 
     /* multi-regression */
     MultiRMSE,
+    MultiRMSEWithMissingValues,
+
+    /* multilabel classification */
+    MultiLogloss,
+    MultiCrossEntropy,
 
     Combination
 };
@@ -247,7 +263,8 @@ enum class EFstrType {
     InternalInteraction,
     ShapValues,
     PredictionDiff,
-    ShapInteractionValues
+    ShapInteractionValues,
+    SageValues
 };
 
 enum class EFstrCalculatedInFitType {
@@ -338,6 +355,12 @@ enum class ENdcgDenominatorType {
     Position
 };
 
+enum class ENdcgSortType {
+    None,
+    ByPrediction,
+    ByTarget
+};
+
 enum class EMetricBestValue {
     Max,
     Min,
@@ -376,6 +399,11 @@ enum class EF1AverageType {
     Weighted
 };
 
+enum class EAccuracyType {
+    Classic,
+    PerClass
+};
+
 namespace NCB {
     enum class EFeatureEvalMode {
         OneVsNone,
@@ -395,5 +423,10 @@ namespace NCB {
         RecursiveByPredictionValuesChange,
         RecursiveByLossFunctionChange,
         RecursiveByShapValues
+    };
+
+    enum class EFeaturesSelectionGrouping {
+        Individual,
+        ByTags
     };
 }

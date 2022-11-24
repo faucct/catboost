@@ -127,7 +127,7 @@ NCB::TEvalResult NCB::Apply(
     bool isUncertaintyPrediction,
     NPar::ILocalExecutor* executor) {
 
-    NCB::TEvalResult resultApprox;
+    NCB::TEvalResult resultApprox(virtualEnsemblesCount);
     TVector<TVector<TVector<double>>>& rawValues = resultApprox.GetRawValuesRef();
 
     auto maybeBaseline = dataset.RawTargetData.GetBaseline();
@@ -202,9 +202,16 @@ void NCB::CalcModelSingleHost(
 
     bool IsFirstBlock = true;
     ui64 docIdOffset = 0;
-    auto poolColumnsPrinter = CreatePoolColumnPrinter(
-        params.DatasetReadingParams.PoolPath,
-        params.DatasetReadingParams.ColumnarPoolFormatParams.DsvFormat);
+    auto poolColumnsPrinter = TIntrusivePtr<NCB::IPoolColumnsPrinter>(
+        GetProcessor<NCB::IPoolColumnsPrinter>(
+            params.DatasetReadingParams.PoolPath,
+            NCB::TPoolColumnsPrinterPullArgs{
+                params.DatasetReadingParams.PoolPath,
+                params.DatasetReadingParams.ColumnarPoolFormatParams.DsvFormat,
+                /*columnsMetaInfo*/ Nothing()
+            }
+        ).Release()
+    );
     const int blockSize = Max<int>(
         32,
         static_cast<int>(10000. / (static_cast<double>(iterationsLimit) / evalPeriod) / model.GetDimensionsCount())
@@ -235,7 +242,8 @@ void NCB::CalcModelSingleHost(
                 /*testFileWhichOf*/ {0, 0},
                 IsFirstBlock,
                 docIdOffset,
-                std::make_pair(evalPeriod, iterationsLimit));
+                std::make_pair(evalPeriod, iterationsLimit),
+                model.GetBinClassLogitThreshold());
             docIdOffset += datasetPart->ObjectsGrouping->GetObjectCount();
             IsFirstBlock = false;
         },

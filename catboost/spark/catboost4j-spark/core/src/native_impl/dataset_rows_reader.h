@@ -33,16 +33,22 @@ private:
 
 struct IJVMLineDataReader : public NCB::ILineDataReader {
     // should be marked 'final', but SWIG is unable to parse it
-    bool ReadLine(TString* line) override {
+    bool ReadLine(TString* line, ui64* lineIdx) override {
+        if (lineIdx) {
+            *lineIdx = LineIndex;
+        }
+        ++LineIndex;
         return ReadLineJVM(TStringOutWrapper(line));
     }
 
-    bool ReadLine(TString*, TString*) override {
-        Y_UNREACHABLE();
+    bool ReadLine(TString*, TString*, ui64*) override {
+        CB_ENSURE(false, "Unimplemented");
     }
 
     // override this method in derived JVM classes
     virtual bool ReadLineJVM(TStringOutWrapper line) = 0;
+
+    ui64 LineIndex = 0;
 };
 
 
@@ -100,7 +106,7 @@ public:
         bool hasHeader,
         i32 blockSize,
         i32 threadCount
-    ) throw (yexception);
+    );
 
     TIntermediateDataMetaInfo GetMetaInfo() const {
         return MetaInfo;
@@ -113,10 +119,10 @@ public:
 #endif
 
     // returns block size
-    i32 ReadNextBlock() throw (yexception);
+    i32 ReadNextBlock();
 
     // objectIdx means index in block
-    const TRawDatasetRow& GetRow(i32 objectIdx) throw (yexception);
+    const TRawDatasetRow& GetRow(i32 objectIdx);
 
 private:
     NPar::TLocalExecutor LocalExecutor;

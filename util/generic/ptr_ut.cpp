@@ -2,11 +2,11 @@
 #include "vector.h"
 #include "noncopyable.h"
 
+#include <library/cpp/testing/common/probe.h>
 #include <library/cpp/testing/unittest/registar.h>
 
 #include <util/generic/hash_set.h>
 #include <util/generic/is_in.h>
-#include <util/stream/output.h>
 #include <util/system/thread.h>
 
 class TPointerTest: public TTestBase {
@@ -33,7 +33,8 @@ class TPointerTest: public TTestBase {
     UNIT_TEST(TestMakeShared);
     UNIT_TEST(TestComparison);
     UNIT_TEST(TestSimpleIntrusivePtrCtorTsan);
-    UNIT_TEST(TestRefCountedPtrsInHashSet)
+    UNIT_TEST(TestRefCountedPtrsInHashSet);
+    UNIT_TEST(TestSharedPtrDowncast);
     UNIT_TEST_SUITE_END();
 
 private:
@@ -42,7 +43,7 @@ private:
         };
 
         struct TLocalThread: public ISimpleThread {
-            virtual void* ThreadProc() override {
+            void* ThreadProc() override {
                 TSimpleIntrusivePtr<S> ptr;
                 return nullptr;
             }
@@ -87,6 +88,7 @@ private:
     template <class T, class TRefCountedPtr>
     void TestRefCountedPtrsInHashSetImpl();
     void TestRefCountedPtrsInHashSet();
+    void TestSharedPtrDowncast();
 };
 
 UNIT_TEST_SUITE_REGISTRATION(TPointerTest);
@@ -110,7 +112,7 @@ public:
     }
 };
 
-static A* newA() {
+static A* MakeA() {
     return new A();
 }
 
@@ -118,18 +120,18 @@ static A* newA() {
  * test compileability
  */
 class B;
-static TSimpleIntrusivePtr<B> getB() {
+static TSimpleIntrusivePtr<B> GetB() {
     throw 1;
 }
 
-void func() {
-    TSimpleIntrusivePtr<B> b = getB();
+void Func() {
+    TSimpleIntrusivePtr<B> b = GetB();
 }
 
 void TPointerTest::TestSimpleIntrPtr() {
     {
-        TSimpleIntrusivePtr<A> a1(newA());
-        TSimpleIntrusivePtr<A> a2(newA());
+        TSimpleIntrusivePtr<A> a1(MakeA());
+        TSimpleIntrusivePtr<A> a2(MakeA());
         TSimpleIntrusivePtr<A> a3 = a2;
 
         a1 = a2;
@@ -141,7 +143,7 @@ void TPointerTest::TestSimpleIntrPtr() {
 
 void TPointerTest::TestHolderPtr() {
     {
-        THolder<A> a1(newA());
+        THolder<A> a1(MakeA());
         THolder<A> a2(a1.Release());
     }
 
@@ -207,7 +209,8 @@ void TPointerTest::TestMakeHolder() {
             TRec(int x, int y)
                 : X(x)
                 , Y(y)
-            {}
+            {
+            }
         };
         auto ptr = MakeHolder<TRec>(1, 2);
         UNIT_ASSERT_VALUES_EQUAL(ptr->X, 1);
@@ -216,20 +219,20 @@ void TPointerTest::TestMakeHolder() {
     {
         class TRec {
         private:
-            int X, Y;
+            int X_, Y_;
 
         public:
             TRec(int x, int y)
-                : X(x)
-                , Y(y)
+                : X_(x)
+                , Y_(y)
             {
             }
 
             int GetX() const {
-                return X;
+                return X_;
             }
             int GetY() const {
-                return Y;
+                return Y_;
             }
         };
         auto ptr = MakeHolder<TRec>(1, 2);
@@ -240,7 +243,7 @@ void TPointerTest::TestMakeHolder() {
 
 void TPointerTest::TestTrulePtr() {
     {
-        TAutoPtr<A> a1(newA());
+        TAutoPtr<A> a1(MakeA());
         TAutoPtr<A> a2(a1);
         a1 = a2;
     }
@@ -250,7 +253,7 @@ void TPointerTest::TestTrulePtr() {
 
 void TPointerTest::TestAutoToHolder() {
     {
-        TAutoPtr<A> a1(newA());
+        TAutoPtr<A> a1(MakeA());
         THolder<A> a2(a1);
 
         UNIT_ASSERT_EQUAL(a1.Get(), nullptr);
@@ -278,9 +281,9 @@ void TPointerTest::TestAutoToHolder() {
 }
 
 void TPointerTest::TestCopyPtr() {
-    TCopyPtr<A> a1(newA());
+    TCopyPtr<A> a1(MakeA());
     {
-        TCopyPtr<A> a2(newA());
+        TCopyPtr<A> a2(MakeA());
         TCopyPtr<A> a3 = a2;
         UNIT_ASSERT_VALUES_EQUAL(cnt, 3);
 
@@ -582,30 +585,38 @@ void TPointerTest::TestOperatorBool() {
         THolder<TVec> a;
         UNIT_ASSERT(!a);
         UNIT_ASSERT(!bool(a));
-        if (a)
+        if (a) {
             UNIT_ASSERT(false);
-        if (!a)
+        }
+        if (!a) {
             UNIT_ASSERT(true);
+        }
 
         a.Reset(new TVec);
         UNIT_ASSERT(a);
         UNIT_ASSERT(bool(a));
-        if (a)
+        if (a) {
             UNIT_ASSERT(true);
-        if (!a)
+        }
+        if (!a) {
             UNIT_ASSERT(false);
+        }
 
         THolder<TVec> b(new TVec);
         UNIT_ASSERT(a.Get() != b.Get());
         UNIT_ASSERT(a != b);
-        if (a == b)
+        if (a == b) {
             UNIT_ASSERT(false);
-        if (a != b)
+        }
+        if (a != b) {
             UNIT_ASSERT(true);
-        if (!(a && b))
+        }
+        if (!(a && b)) {
             UNIT_ASSERT(false);
-        if (a && b)
+        }
+        if (a && b) {
             UNIT_ASSERT(true);
+        }
 
         // int i = a;          // does not compile
         // bool c = (a < b);   // does not compile
@@ -641,20 +652,20 @@ void TPointerTest::TestMakeShared() {
     {
         class TRec {
         private:
-            int X, Y;
+            int X_, Y_;
 
         public:
             TRec(int x, int y)
-                : X(x)
-                , Y(y)
+                : X_(x)
+                , Y_(y)
             {
             }
 
             int GetX() const {
-                return X;
+                return X_;
             }
             int GetY() const {
-                return Y;
+                return Y_;
             }
         };
         TSimpleSharedPtr<TRec> ptr = MakeSimpleShared<TRec>(1, 2);
@@ -745,13 +756,13 @@ void TPointerTest::TestRefCountedPtrsInHashSetImpl() {
     UNIT_ASSERT_VALUES_EQUAL(hashSet.size(), 2);
 }
 
-struct TCustomIntrusivePtrOps : TDefaultIntrusivePtrOps<A> {
+struct TCustomIntrusivePtrOps: TDefaultIntrusivePtrOps<A> {
 };
 
-struct TCustomDeleter : TDelete {
+struct TCustomDeleter: TDelete {
 };
 
-struct TCustomCounter : TSimpleCounter {
+struct TCustomCounter: TSimpleCounter {
     using TSimpleCounterTemplate::TSimpleCounterTemplate;
 };
 
@@ -771,29 +782,31 @@ void TPointerTest::TestRefCountedPtrsInHashSet() {
 class TRefCountedWithStatistics: public TNonCopyable {
 public:
     struct TExternalCounter {
-        TAtomic Counter{0};
-        TAtomic Increments{0};
+        std::atomic<size_t> Counter{0};
+        std::atomic<size_t> Increments{0};
     };
 
     TRefCountedWithStatistics(TExternalCounter& cnt)
         : ExternalCounter_(cnt)
     {
-        ExternalCounter_ = {}; // reset counters
+        // Reset counters
+        ExternalCounter_.Counter.store(0);
+        ExternalCounter_.Increments.store(0);
     }
 
     void Ref() noexcept {
-        AtomicIncrement(ExternalCounter_.Counter);
-        AtomicIncrement(ExternalCounter_.Increments);
+        ++ExternalCounter_.Counter;
+        ++ExternalCounter_.Increments;
     }
 
     void UnRef() noexcept {
-        if (AtomicDecrement(ExternalCounter_.Counter) == 0) {
+        if (--ExternalCounter_.Counter == 0) {
             TDelete::Destroy(this);
         }
     }
 
     void DecRef() noexcept {
-        Y_VERIFY(AtomicDecrement(ExternalCounter_.Counter) != 0);
+        Y_VERIFY(--ExternalCounter_.Counter != 0);
     }
 
 private:
@@ -803,24 +816,77 @@ private:
 void TPointerTest::TestIntrusiveConstConstruction() {
     {
         TRefCountedWithStatistics::TExternalCounter cnt;
-        UNIT_ASSERT_VALUES_EQUAL(AtomicGet(cnt.Counter), 0);
-        UNIT_ASSERT_VALUES_EQUAL(AtomicGet(cnt.Increments), 0);
+        UNIT_ASSERT_VALUES_EQUAL(cnt.Counter.load(), 0);
+        UNIT_ASSERT_VALUES_EQUAL(cnt.Increments.load(), 0);
         TIntrusivePtr<TRefCountedWithStatistics> i{MakeIntrusive<TRefCountedWithStatistics>(cnt)};
-        UNIT_ASSERT_VALUES_EQUAL(AtomicGet(cnt.Counter), 1);
-        UNIT_ASSERT_VALUES_EQUAL(AtomicGet(cnt.Increments), 1);
+        UNIT_ASSERT_VALUES_EQUAL(cnt.Counter.load(), 1);
+        UNIT_ASSERT_VALUES_EQUAL(cnt.Increments.load(), 1);
         i.Reset();
-        UNIT_ASSERT_VALUES_EQUAL(AtomicGet(cnt.Counter), 0);
-        UNIT_ASSERT_VALUES_EQUAL(AtomicGet(cnt.Increments), 1);
+        UNIT_ASSERT_VALUES_EQUAL(cnt.Counter.load(), 0);
+        UNIT_ASSERT_VALUES_EQUAL(cnt.Increments.load(), 1);
     }
     {
         TRefCountedWithStatistics::TExternalCounter cnt;
-        UNIT_ASSERT_VALUES_EQUAL(AtomicGet(cnt.Counter), 0);
-        UNIT_ASSERT_VALUES_EQUAL(AtomicGet(cnt.Increments), 0);
+        UNIT_ASSERT_VALUES_EQUAL(cnt.Counter.load(), 0);
+        UNIT_ASSERT_VALUES_EQUAL(cnt.Increments.load(), 0);
         TIntrusiveConstPtr<TRefCountedWithStatistics> c{MakeIntrusive<TRefCountedWithStatistics>(cnt)};
-        UNIT_ASSERT_VALUES_EQUAL(AtomicGet(cnt.Counter), 1);
-        UNIT_ASSERT_VALUES_EQUAL(AtomicGet(cnt.Increments), 1);
+        UNIT_ASSERT_VALUES_EQUAL(cnt.Counter.load(), 1);
+        UNIT_ASSERT_VALUES_EQUAL(cnt.Increments.load(), 1);
         c.Reset();
-        UNIT_ASSERT_VALUES_EQUAL(AtomicGet(cnt.Counter), 0);
-        UNIT_ASSERT_VALUES_EQUAL(AtomicGet(cnt.Increments), 1);
+        UNIT_ASSERT_VALUES_EQUAL(cnt.Counter.load(), 0);
+        UNIT_ASSERT_VALUES_EQUAL(cnt.Increments.load(), 1);
+    }
+}
+
+class TVirtualProbe: public NTesting::TProbe {
+public:
+    using NTesting::TProbe::TProbe;
+
+    virtual ~TVirtualProbe() = default;
+};
+
+class TDerivedProbe: public TVirtualProbe {
+public:
+    using TVirtualProbe::TVirtualProbe;
+};
+
+void TPointerTest::TestSharedPtrDowncast() {
+    {
+        NTesting::TProbeState probeState = {};
+
+        {
+            TSimpleSharedPtr<TVirtualProbe> base = MakeSimpleShared<TDerivedProbe>(&probeState);
+            UNIT_ASSERT_VALUES_EQUAL(probeState.Constructors, 1);
+
+            {
+                auto derived = base.As<TDerivedProbe>();
+                UNIT_ASSERT_VALUES_EQUAL(probeState.Constructors, 1);
+
+                UNIT_ASSERT_VALUES_EQUAL(base.Get(), derived.Get());
+                UNIT_ASSERT_VALUES_EQUAL(base.ReferenceCounter(), derived.ReferenceCounter());
+
+                UNIT_ASSERT_VALUES_EQUAL(base.RefCount(), 2l);
+                UNIT_ASSERT_VALUES_EQUAL(derived.RefCount(), 2l);
+            }
+
+            UNIT_ASSERT_VALUES_EQUAL(probeState.Destructors, 0);
+        }
+
+        UNIT_ASSERT_VALUES_EQUAL(probeState.Destructors, 1);
+    }
+    {
+        NTesting::TProbeState probeState = {};
+
+        {
+            TSimpleSharedPtr<TVirtualProbe> base = MakeSimpleShared<TDerivedProbe>(&probeState);
+            UNIT_ASSERT_VALUES_EQUAL(probeState.Constructors, 1);
+
+            auto derived = std::move(base).As<TDerivedProbe>();
+            UNIT_ASSERT_VALUES_EQUAL(probeState.Constructors, 1);
+            UNIT_ASSERT_VALUES_EQUAL(probeState.CopyConstructors, 0);
+            UNIT_ASSERT_VALUES_EQUAL(probeState.Destructors, 0);
+        }
+
+        UNIT_ASSERT_VALUES_EQUAL(probeState.Destructors, 1);
     }
 }

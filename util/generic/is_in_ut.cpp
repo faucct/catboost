@@ -2,6 +2,7 @@
 
 #include "algorithm.h"
 #include "hash.h"
+#include "hash_multi_map.h"
 #include "hash_set.h"
 #include "is_in.h"
 #include "map.h"
@@ -106,7 +107,7 @@ Y_UNIT_TEST_SUITE(TIsIn) {
     }
 
     Y_UNIT_TEST(IsInArrayTest) {
-        const TString array[] = { "a", "b", "d" };
+        const TString array[] = {"a", "b", "d"};
 
         UNIT_ASSERT(IsIn(array, "a"));
         UNIT_ASSERT(IsIn(array, TString("b")));

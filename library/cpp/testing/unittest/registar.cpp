@@ -13,7 +13,6 @@
 #include <util/string/cast.h>
 
 bool NUnitTest::ShouldColorizeDiff = true;
-bool NUnitTest::ContinueOnFail = false;
 
 TString NUnitTest::RandomString(size_t len, ui32 seed) {
     TReallyFastRng32 rand(seed);
@@ -47,7 +46,7 @@ void ::NUnitTest::NPrivate::RaiseError(const char* what, const TString& msg, boo
     TBackTrace bt;
     bt.Capture();
     GetCurrentTest()->AddError(msg.data(), bt.PrintToString());
-    if (::NUnitTest::ContinueOnFail || !fatalFailure) {
+    if (!fatalFailure) {
         return;
     }
     throw TAssertException();
@@ -172,12 +171,6 @@ static size_t CountTests(const TMap<TString, size_t>& testErrors, bool succeeded
     return cnt;
 }
 
-const TString& NUnitTest::TTestContext::GetParam(const TString& key, const TString& def) const {
-    if (Processor == nullptr)
-        return def;
-    return Processor->GetParam(key, def);
-}
-
 NUnitTest::ITestSuiteProcessor::ITestSuiteProcessor() = default;
 
 NUnitTest::ITestSuiteProcessor::~ITestSuiteProcessor() = default;
@@ -252,13 +245,6 @@ bool NUnitTest::ITestSuiteProcessor::GetForkTests() const {
     return false;
 }
 
-void NUnitTest::ITestSuiteProcessor::SetParam(const TString& /*key*/, const TString& /*value*/) {
-}
-
-const TString& NUnitTest::ITestSuiteProcessor::GetParam(const TString& /*key*/, const TString& def) const {
-    return def;
-}
-
 void NUnitTest::ITestSuiteProcessor::OnStart() {
 }
 
@@ -312,7 +298,7 @@ NUnitTest::TTestBase::TTestBase() noexcept
 NUnitTest::TTestBase::~TTestBase() = default;
 
 TString NUnitTest::TTestBase::TypeId() const {
-    return TypeName(this);
+    return TypeName(*this);
 }
 
 void NUnitTest::TTestBase::SetUp() {
@@ -377,7 +363,7 @@ void NUnitTest::TTestBase::AtEnd() {
     Processor()->UnitStop(unit);
 }
 
-void NUnitTest::TTestBase::Run(std::function<void()> f, const TString suite, const char* name, const bool forceFork) {
+void NUnitTest::TTestBase::Run(std::function<void()> f, const TString& suite, const char* name, const bool forceFork) {
     TestErrors_ = 0;
     CurrentSubtest_ = name;
     Processor()->Run(f, suite, name, forceFork);

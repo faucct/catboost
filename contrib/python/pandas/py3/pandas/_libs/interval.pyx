@@ -1,10 +1,18 @@
+import inspect
 import numbers
-from operator import le, lt
+from operator import (
+    le,
+    lt,
+)
 
-from cpython.datetime cimport PyDateTime_IMPORT, PyDelta_Check
+from cpython.datetime cimport (
+    PyDelta_Check,
+    import_datetime,
+)
 
-PyDateTime_IMPORT
+import_datetime()
 
+cimport cython
 from cpython.object cimport (
     Py_EQ,
     Py_GE,
@@ -14,9 +22,8 @@ from cpython.object cimport (
     Py_NE,
     PyObject_RichCompare,
 )
+from cython cimport Py_ssize_t
 
-import cython
-from cython import Py_ssize_t
 import numpy as np
 
 cimport numpy as cnp
@@ -46,7 +53,7 @@ from pandas._libs.tslibs.util cimport (
     is_timedelta64_object,
 )
 
-_VALID_CLOSED = frozenset(['left', 'right', 'both', 'neither'])
+VALID_CLOSED = frozenset(['left', 'right', 'both', 'neither'])
 
 
 cdef class IntervalMixin:
@@ -89,7 +96,7 @@ cdef class IntervalMixin:
         Returns
         -------
         bool
-            True if the Interval is closed on the left-side.
+            True if the Interval is not closed on the left-side.
         """
         return not self.closed_left
 
@@ -103,7 +110,7 @@ cdef class IntervalMixin:
         Returns
         -------
         bool
-            True if the Interval is closed on the left-side.
+            True if the Interval is not closed on the left-side.
         """
         return not self.closed_right
 
@@ -179,7 +186,8 @@ cdef class IntervalMixin:
         return (self.right == self.left) & (self.closed != 'both')
 
     def _check_closed_matches(self, other, name='other'):
-        """Check if the closed attribute of `other` matches.
+        """
+        Check if the closed attribute of `other` matches.
 
         Note that 'left' and 'right' are considered different from 'both'.
 
@@ -252,9 +260,11 @@ cdef class Interval(IntervalMixin):
     >>> iv
     Interval(0, 5, closed='right')
 
-    You can check if an element belongs to it
+    You can check if an element belongs to it, or if it contains another interval:
 
     >>> 2.5 in iv
+    True
+    >>> pd.Interval(left=2, right=5, closed='both') in iv
     True
 
     You can test the bounds (``closed='right'``, so ``0 < x <= 5``):
@@ -291,12 +301,6 @@ cdef class Interval(IntervalMixin):
     True
     >>> year_2017.length
     Timedelta('365 days 00:00:00')
-
-    And also you can create string intervals
-
-    >>> volume_1 = pd.Interval('Ant', 'Dog', closed='both')
-    >>> 'Bee' in volume_1
-    True
     """
     _typ = "interval"
     __array_priority__ = 1000
@@ -313,8 +317,9 @@ cdef class Interval(IntervalMixin):
 
     cdef readonly str closed
     """
-    Whether the interval is closed on the left-side, right-side, both or
-    neither.
+    String describing the inclusive side the intervals.
+
+    Either ``left``, ``right``, ``both`` or ``neither``.
     """
 
     def __init__(self, left, right, str closed='right'):
@@ -324,7 +329,7 @@ cdef class Interval(IntervalMixin):
         self._validate_endpoint(left)
         self._validate_endpoint(right)
 
-        if closed not in _VALID_CLOSED:
+        if closed not in VALID_CLOSED:
             raise ValueError(f"invalid option for 'closed': {closed}")
         if not left <= right:
             raise ValueError("left side of interval must be <= right side")
@@ -349,7 +354,17 @@ cdef class Interval(IntervalMixin):
 
     def __contains__(self, key) -> bool:
         if _interval_like(key):
-            raise TypeError("__contains__ not defined for two intervals")
+            key_closed_left = key.closed in ('left', 'both')
+            key_closed_right = key.closed in ('right', 'both')
+            if self.open_left and key_closed_left:
+                left_contained = self.left < key.left
+            else:
+                left_contained = self.left <= key.left
+            if self.open_right and key_closed_right:
+                right_contained = key.right < self.right
+            else:
+                right_contained = key.right <= self.right
+            return left_contained and right_contained
         return ((self.left < key if self.open_left else self.left <= key) and
                 (key < self.right if self.open_right else key <= self.right))
 
@@ -403,6 +418,8 @@ cdef class Interval(IntervalMixin):
         ):
             return Interval(self.left + y, self.right + y, closed=self.closed)
         elif (
+            # __radd__ pattern
+            # TODO(cython3): remove this
             isinstance(y, Interval)
             and (
                 isinstance(self, numbers.Number)
@@ -411,6 +428,15 @@ cdef class Interval(IntervalMixin):
             )
         ):
             return Interval(y.left + self, y.right + self, closed=y.closed)
+        return NotImplemented
+
+    def __radd__(self, other):
+        if (
+                isinstance(other, numbers.Number)
+                or PyDelta_Check(other)
+                or is_timedelta64_object(other)
+        ):
+            return Interval(self.left + other, self.right + other, closed=self.closed)
         return NotImplemented
 
     def __sub__(self, y):
@@ -426,7 +452,14 @@ cdef class Interval(IntervalMixin):
         if isinstance(y, numbers.Number):
             return Interval(self.left * y, self.right * y, closed=self.closed)
         elif isinstance(y, Interval) and isinstance(self, numbers.Number):
+            # __radd__ semantics
+            # TODO(cython3): remove this
             return Interval(y.left * self, y.right * self, closed=y.closed)
+        return NotImplemented
+
+    def __rmul__(self, other):
+        if isinstance(other, numbers.Number):
+            return Interval(self.left * other, self.right * other, closed=self.closed)
         return NotImplemented
 
     def __truediv__(self, y):
@@ -447,8 +480,6 @@ cdef class Interval(IntervalMixin):
         Two intervals overlap if they share a common point, including closed
         endpoints. Intervals that only have an open endpoint in common do not
         overlap.
-
-        .. versionadded:: 0.24.0
 
         Parameters
         ----------
@@ -517,9 +548,9 @@ def intervals_to_interval_bounds(ndarray intervals, bint validate_closed=True):
 
     Returns
     -------
-    tuple of tuples
-        left : (ndarray, object, array)
-        right : (ndarray, object, array)
+    tuple of
+        left : ndarray
+        right : ndarray
         closed: str
     """
     cdef:

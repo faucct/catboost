@@ -7,6 +7,7 @@ DISABLE(USE_ASMLIB)
 SRCS(
     main.cpp
     mode_calc.cpp
+    mode_dataset_statistics.cpp
     mode_eval_metrics.cpp
     mode_eval_feature.cpp
     mode_fit.cpp
@@ -19,11 +20,13 @@ SRCS(
     mode_roc.cpp
     mode_run_worker.cpp
     mode_select_features.cpp
+    mode_dump_options.cpp
     GLOBAL signal_handling.cpp
 )
 
 PEERDIR(
     catboost/libs/data
+    catboost/libs/dataset_statistics
     catboost/libs/features_selection
     catboost/libs/helpers
     catboost/libs/logging
@@ -48,22 +51,35 @@ PEERDIR(
 
 GENERATE_ENUM_SERIALIZATION(model_metainfo_helpers.h)
 
-IF(CATBOOST_OPENSOURCE)
-    NO_GPL()
+IF(OPENSOURCE)
+    RESTRICT_LICENSES(
+        DENY REQUIRE_DISCLOSURE FORBIDDEN
+        EXCEPT
+            contrib/libs/linux-headers # DTCC-725
+            contrib/libs/intel/mkl # DTCC-730
+    )
 ELSE()
     PEERDIR(
         catboost//private/libs/for_app
     )
 ENDIF()
 
-IF (ARCH_AARCH64 OR OS_WINDOWS)
+IF (OS_WINDOWS)
     ALLOCATOR(J)
 ELSE()
-    ALLOCATOR(LF)
+    ALLOCATOR(MIM)
 ENDIF()
 
-IF (CATBOOST_OPENSOURCE AND AUTOCHECK)
+IF (OPENSOURCE AND AUTOCHECK)
     INCLUDE(${ARCADIA_ROOT}/catboost//oss/checks/check_deps.inc)
+ENDIF()
+
+IF (HAVE_CUDA)
+    CFLAGS(-DHAVE_CUDA)
+
+    PEERDIR(
+        catboost/cuda/cuda_lib
+    )
 ENDIF()
 
 END()

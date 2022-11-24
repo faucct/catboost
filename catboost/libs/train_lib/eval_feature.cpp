@@ -29,6 +29,7 @@
 #include <catboost/private/libs/options/enum_helpers.h>
 #include <catboost/private/libs/options/feature_eval_options.h>
 #include <catboost/private/libs/options/output_file_options.h>
+#include <catboost/private/libs/options/path_helpers.h>
 #include <catboost/private/libs/options/plain_options_helper.h>
 
 #include <util/generic/algorithm.h>
@@ -271,6 +272,7 @@ void TFeatureEvaluationSummary::CreateLogs(
     const auto& metricsHistory = MetricsHistory[isTest];
     const auto& featureStrengths = FeatureStrengths[isTest];
     const auto& regularFeatureStrengths = RegularFeatureStrengths[isTest];
+    const auto& models = Models[isTest];
     const auto& metricsMetaJson = GetJsonMeta(
         iterationCount,
         outputFileOptions.GetName(),
@@ -317,6 +319,11 @@ void TFeatureEvaluationSummary::CreateLogs(
                     regularFeatureStrengths[useSetZeroAlways ? 0 : setIdx][absoluteFoldIdx - absoluteOffset],
                     regularFstrPath);
             }
+            const auto outputModelPath = options.CreateResultModelFullPath();
+            if (!outputModelPath.empty()) {
+                TFileOutput modelFile(outputModelPath);
+                models[useSetZeroAlways ? 0 : setIdx][absoluteFoldIdx - absoluteOffset].Save(&modelFile);
+            }
         }
     }
 }
@@ -341,6 +348,7 @@ void TFeatureEvaluationSummary::SetHeaderInfo(
     ResizeRank2(2, featureSetCount, MetricsHistory);
     ResizeRank2(2, featureSetCount, FeatureStrengths);
     ResizeRank2(2, featureSetCount, RegularFeatureStrengths);
+    ResizeRank2(2, featureSetCount, Models);
     ResizeRank2(2, featureSetCount, BestMetrics);
     BestBaselineIterations.resize(featureSetCount);
 }
@@ -632,11 +640,11 @@ static void LoadOptions(
     catBoostOptions->Load(jsonParams);
     outputFileOptions->Load(outputJsonParams);
 
-    if (outputFileOptions->GetMetricPeriod() > 1) {
+    if (outputFileOptions->IsMetricPeriodSet() && outputFileOptions->GetMetricPeriod() > 1) {
         CATBOOST_WARNING_LOG << "Warning: metric_period is ignored because "
             "feature evaluation needs metric values on each iteration" << Endl;
-        outputFileOptions->SetMetricPeriod(1);
     }
+    outputFileOptions->SetMetricPeriod(1);
 }
 
 
@@ -671,6 +679,11 @@ static void CalcMetricsForTest(
         foldContext->FullModel.GetRef(),
         testData->ObjectsData,
         &NPar::LocalExecutor());
+
+    const auto baseline = *testData->TargetData->GetBaseline();
+    if (baseline){
+        AssignRank2(baseline, &approx);
+    }
     for (auto treeIdx : xrange(treeCount)) {
         // TODO(kirillovs):
         //     apply (1) all models to the entire dataset on CPU or (2) GPU,
@@ -854,6 +867,7 @@ static void EvaluateFeaturesImpl(
 
     TTrainingDataProviderPtr trainingData = GetTrainingData(
         std::move(data),
+        /*dataCanBeEmpty*/ false,
         /*isLearnData*/ true,
         TStringBuf(),
         Nothing(), // TODO(akhropov): allow loading borders and nanModes in CV?
@@ -997,6 +1011,7 @@ static void EvaluateFeaturesImpl(
 
             results->MetricsHistory[isTest][featureSetIdx].emplace_back(foldContext.MetricValuesOnTest);
             results->AppendFeatureSetMetrics(isTest, featureSetIdx, foldContext.MetricValuesOnTest);
+            results->Models[isTest][featureSetIdx].emplace_back(foldContext.FullModel.GetRef());
 
             CATBOOST_INFO_LOG << "Fold " << foldContext.FoldIdx << ": model built in " <<
                 FloatToString(timer.Passed(), PREC_NDIGITS, 2) << " sec" << Endl;
@@ -1064,6 +1079,7 @@ static void EvaluateFeaturesImpl(
             results->MetricsHistory[/*isTest*/1][featureSetIdx] = results->MetricsHistory[/*isTest*/0][baselineIdx];
             results->FeatureStrengths[/*isTest*/1][featureSetIdx] = results->FeatureStrengths[/*isTest*/0][baselineIdx];
             results->RegularFeatureStrengths[/*isTest*/1][featureSetIdx] = results->RegularFeatureStrengths[/*isTest*/0][baselineIdx];
+            results->Models[/*isTest*/1][featureSetIdx] = results->Models[/*isTest*/0][baselineIdx];
             results->BestMetrics[/*isTest*/1][featureSetIdx] = results->BestMetrics[/*isTest*/0][baselineIdx];
         }
     }
@@ -1077,13 +1093,6 @@ static void EvaluateFeaturesImpl(
             foldRangeBegin,
             callbacks->GetAbsoluteOffset());
     }
-}
-
-static TString MakeAbsolutePath(const TString& path) {
-    if (TFsPath(path).IsAbsolute()) {
-        return path;
-    }
-    return JoinFsPaths(TFsPath::Cwd(), path);
 }
 
 static ui32 GetSamplingUnitCount(const NCB::TObjectsGrouping& objectsGrouping, bool isObjectwise) {
@@ -1104,6 +1113,9 @@ static void CountDisjointFolds(
         samplingUnitsCount = GetSamplingUnitCount(objectsGrouping, isObjectwise);
     } else {
         const auto timestamps = *data->ObjectsData->GetTimestamp();
+        CB_ENSURE(
+            data->ObjectsData->GetGroupIds(),
+            "Timestamps require group ids");
         const auto timesplitQuantileTimestamp = FindQuantileTimestamp(
             *data->ObjectsData->GetGroupIds(),
             timestamps,

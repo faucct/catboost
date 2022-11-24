@@ -6,7 +6,7 @@
 #include <util/generic/vector.h>
 #include <util/stream/mem.h>
 #include <util/stream/output.h>
-#include <util/system/atomic.h>
+#include <library/cpp/deprecated/atomic/atomic.h>
 
 #include "location.h"
 #include "neh.h"
@@ -17,6 +17,11 @@
 //common primitives for http/http2
 
 namespace NNeh {
+    struct THttpErrorDetails {
+        TString Details = {};
+        TString Headers = {};
+    };
+
     class IHttpRequest: public IRequest {
     public:
         using IRequest::SendReply;
@@ -25,6 +30,11 @@ namespace NNeh {
         virtual TStringBuf Method() const = 0;
         virtual TStringBuf Body() const = 0;
         virtual TStringBuf Cgi() const = 0;
+        void SendError(TResponseError err, const TString& details = TString()) override final {
+            SendError(err, THttpErrorDetails{.Details = details});
+        }
+
+        virtual void SendError(TResponseError err, const THttpErrorDetails& details) = 0;
     };
 
     namespace NHttp {
@@ -145,6 +155,7 @@ namespace NNeh {
         struct TRequestSettings {
             bool NoDelay = true;
             EResolverType ResolverType = EResolverType::ETCP;
+            bool UseAsyncSendRequest = false;
 
             TRequestSettings& SetNoDelay(bool noDelay) {
                 NoDelay = noDelay;
@@ -153,6 +164,11 @@ namespace NNeh {
 
             TRequestSettings& SetResolverType(EResolverType resolverType) {
                 ResolverType = resolverType;
+                return *this;
+            }
+
+            TRequestSettings& SetUseAsyncSendRequest(bool useAsyncSendRequest) {
+                UseAsyncSendRequest = useAsyncSendRequest;
                 return *this;
             }
         };

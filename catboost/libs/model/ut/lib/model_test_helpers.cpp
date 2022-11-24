@@ -69,6 +69,7 @@ TFullModel TrainFloatCatboostModel(int iterations, int seed) {
             nullptr,
             Nothing(),
             Nothing(),
+            Nothing(),
             std::move(dataProviders),
             /*initModel*/ Nothing(),
             /*initLearnProgress*/ nullptr,
@@ -119,11 +120,13 @@ TDataProviderPtr GetAdultPool() {
         TPathWithScheme(),
         TPathWithScheme(),
         TPathWithScheme(),
+        TPathWithScheme(),
         readDatasetMainParams.ColumnarPoolFormatParams,
         /*ignoredFeatures*/ {},
         EObjectsOrder::Undefined,
         /*threadCount*/ 16,
         /*verbose*/true,
+        /*forceUnitAutoPairWeights*/ false,
         &classLabels
     );
 }
@@ -165,11 +168,13 @@ TDataProviderPtr GetMultiClassPool() {
         TPathWithScheme(),
         TPathWithScheme(),
         TPathWithScheme(),
+        TPathWithScheme(),
         readDatasetMainParams.ColumnarPoolFormatParams,
         /*ignoredFeatures*/ {},
         EObjectsOrder::Undefined,
         /*threadCount*/ 16,
         /*verbose*/true,
+        /*forceUnitAutoPairWeights*/ false,
         &classLabels
     );
 }
@@ -415,6 +420,7 @@ TFullModel DefaultTrainCatOnlyModel(const NJson::TJsonValue& params) {
         nullptr,
         {},
         {},
+        Nothing(),
         std::move(dataProviders),
         /*initModel*/ Nothing(),
         /*initLearnProgress*/ nullptr,

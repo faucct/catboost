@@ -4,7 +4,6 @@ LIBRARY()
 
 SRCS(
     base.cpp
-    exception.cpp
     run_gpu_program.cpp
     cuda_event.cpp
     kernel.cu
@@ -12,17 +11,13 @@ SRCS(
     arch.cu
     stream_pool.cpp
     cuda_vec.cpp
+    cuda_graph.cpp
+    stream_capture.cpp
 )
 
-IF (CUDA_VERSION STREQUAL "10.1" OR CUDA_VERSION STREQUAL "10.2" OR CUDA_VERSION STREQUAL "11.0" )
-    SRCS(
-        cuda_graph.cpp
-        stream_capture.cpp
-    )
-ENDIF()
-
 PEERDIR(
-    contrib/libs/cub
+    contrib/libs/nvidia/cub
+    library/cpp/cuda/exception
     library/cpp/threading/future
 )
 

@@ -10,7 +10,7 @@
 
 using namespace NCB;
 
-bool TIntermediateDataMetaInfo::HasSparseFeatures() const throw (yexception) {
+bool TIntermediateDataMetaInfo::HasSparseFeatures() const {
     if (HasUnknownNumberOfSparseFeatures) {
         return true;
     }
@@ -44,7 +44,7 @@ struct TOneLineReader final : public ILineDataReader {
         , DataLine(singleDataLine)
     {}
 
-    ui64 GetDataLineCount() override {
+    ui64 GetDataLineCount(bool /*estimate*/) override {
         return 1;
     }
 
@@ -52,18 +52,21 @@ struct TOneLineReader final : public ILineDataReader {
         return Header;
     }
 
-    bool ReadLine(TString* line) override {
+    bool ReadLine(TString* line, ui64* lineIdx) override {
         if (DataLineProcessed) {
             return false;
         } else {
+            if (lineIdx) {
+                *lineIdx = 0;
+            }
             *line = std::move(DataLine);
             DataLineProcessed = true;
             return true;
         }
     }
 
-    bool ReadLine(TString*, TString*) override {
-        Y_UNREACHABLE();
+    bool ReadLine(TString*, TString*, ui64*) override {
+        CB_ENSURE(false, "Unimplemented");
     }
 private:
     TMaybe<TString> Header;
@@ -78,7 +81,7 @@ TIntermediateDataMetaInfo GetIntermediateDataMetaInfo(
     const TString& plainJsonParamsAsString,
     const TMaybe<TString>& dsvHeader,
     const TString& firstDataLine
-) throw (yexception) {
+) {
     TRawDatasetRowsReader rowsReader(
         schema,
         new TOneLineReader(TMaybe<TString>(dsvHeader), firstDataLine),

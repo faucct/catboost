@@ -7,6 +7,7 @@
 
 #include <catboost/cuda/gpu_data/oblivious_tree_bin_builder.h>
 #include <catboost/cuda/cuda_util/run_stream_parallel_jobs.h>
+#include <catboost/cuda/methods/langevin_utils.h>
 
 #include <catboost/libs/helpers/math_utils.h>
 
@@ -103,7 +104,14 @@ namespace NCatboostCuda {
         auto& profiler = NCudaLib::GetCudaManager().GetProfiler();
 
         THolder<TTreeCtrDataSetsHelper> ctrDataSetsHelperPtr;
-        TMirrorBuffer<float> featureWeights;
+
+        TMirrorBuffer<float> catFeatureWeights;
+
+        const auto featureCount = FeaturesManager.GetFeatureCount();
+        const auto& featureWeightsCpu = ExpandFeatureWeights(TreeConfig.FeaturePenalties.Get(), featureCount);
+        TMirrorBuffer<float> featureWeights = TMirrorBuffer<float>::Create(NCudaLib::TMirrorMapping(featureCount));
+        featureWeights.Write(featureWeightsCpu);
+        double scoreBeforeSplit = 0.0;
 
         for (ui32 depth = 0; depth < TreeConfig.MaxDepth; ++depth) {
             //warning: don't change order of commands. current pipeline ensures maximum stream-parallelism until read
@@ -138,7 +146,7 @@ namespace NCatboostCuda {
                 maxUniqueValues = ctrDataSetsHelperPtr->GetMaxUniqueValues();
             }
 
-            UpdateFeatureWeightsForBestSplits(FeaturesManager, TreeConfig.ModelSizeReg, featureWeights, maxUniqueValues);
+            UpdateFeatureWeightsForBestSplits(FeaturesManager, TreeConfig.ModelSizeReg, catFeatureWeights, maxUniqueValues);
 
             auto& manager = NCudaLib::GetCudaManager();
 
@@ -158,14 +166,18 @@ namespace NCatboostCuda {
                 }
                 {
                     if (featuresScoreCalcer) {
-                        featuresScoreCalcer->ComputeOptimalSplit(partitionsStats,
-                                                                 featureWeights,
+                        featuresScoreCalcer->ComputeOptimalSplit(partitionsStats.AsConstBuf(),
+                                                                 catFeatureWeights.AsConstBuf(),
+                                                                 featureWeights.AsConstBuf(),
+                                                                 scoreBeforeSplit,
                                                                  ScoreStdDev,
                                                                  GetRandom().NextUniformL());
                     }
                     if (simpleCtrScoreCalcer) {
-                        simpleCtrScoreCalcer->ComputeOptimalSplit(partitionsStats,
-                                                                  featureWeights,
+                        simpleCtrScoreCalcer->ComputeOptimalSplit(partitionsStats.AsConstBuf(),
+                                                                  catFeatureWeights.AsConstBuf(),
+                                                                  featureWeights.AsConstBuf(),
+                                                                  scoreBeforeSplit,
                                                                   ScoreStdDev,
                                                                   GetRandom().NextUniformL());
                     }
@@ -175,6 +187,7 @@ namespace NCatboostCuda {
 
             TBestSplitProperties bestSplitProp = {static_cast<ui32>(-1),
                                                   0,
+                                                  std::numeric_limits<float>::infinity(),
                                                   std::numeric_limits<float>::infinity()};
 
             if (featuresScoreCalcer) {
@@ -198,7 +211,7 @@ namespace NCatboostCuda {
                                                              TreeConfig,
                                                              subsets);
 
-                    ctrDataSetVisitor.SetBestScore(bestSplitProp.Score)
+                    ctrDataSetVisitor.SetBestGain(bestSplitProp.Gain)
                         .SetScoreStdDevAndSeed(ScoreStdDev,
                                                GetRandom().NextUniformL());
                     TMirrorBuffer<ui32> inverseIndices;
@@ -217,11 +230,14 @@ namespace NCatboostCuda {
                         }
 
                         std::function<void(const TTreeCtrDataSet&)> treeCtrDataSetScoreCalcer = [&](
-                                                                                                    const TTreeCtrDataSet& ctrDataSet) {
+                            const TTreeCtrDataSet& ctrDataSet
+                        ) {
                             ctrDataSetVisitor.Accept(ctrDataSet,
-                                                     partitionsStats,
+                                                     partitionsStats.AsConstBuf(),
                                                      inverseIndices,
                                                      directObservationIndices,
+                                                     featureWeights.AsConstBuf(),
+                                                     scoreBeforeSplit,
                                                      maxUniqueValues,
                                                      TreeConfig.ModelSizeReg);
                         };
@@ -237,6 +253,8 @@ namespace NCatboostCuda {
                     }
                 }
             }
+
+            scoreBeforeSplit = bestSplitProp.Score;
 
             CB_ENSURE(bestSplitProp.FeatureId != static_cast<ui32>(-1),
                       TStringBuilder() << "Error: something went wrong, best split is NaN with score"
@@ -402,6 +420,20 @@ namespace NCatboostCuda {
                                                    streams[(2 * i) % streamCount].GetId());
                     task.TestTarget->NewtonAtZero(testTarget, testWeights,
                                                   streams[(2 * i + 1) % streamCount].GetId());
+                }
+
+                if (BoostingOptions.Langevin) {
+                    auto &trainSeeds = Random.GetGpuSeeds<NCudaLib::TMirrorMapping>();
+                    AddLangevinNoise(trainSeeds,
+                                     &learnTarget,
+                                     BoostingOptions.DiffusionTemperature,
+                                     BoostingOptions.LearningRate);
+
+                    auto &testSeeds = Random.GetGpuSeeds<NCudaLib::TMirrorMapping>();
+                    AddLangevinNoise(testSeeds,
+                                     &testTarget,
+                                     BoostingOptions.DiffusionTemperature,
+                                     BoostingOptions.LearningRate);
                 }
             }
 

@@ -121,12 +121,12 @@
     ],
     "test_gpu.test_bootstrap[Ordered]": [
         {
-            "uri": "file://test_gpu.test_bootstrap_Ordered_/test_bernoulli.eval"
+            "uri": "file://test_gpu.test_bootstrap_Ordered_/test_bayes.eval"
         }
     ],
     "test_gpu.test_bootstrap[Plain]": [
         {
-            "uri": "file://test_gpu.test_bootstrap_Plain_/test_bernoulli.eval"
+            "uri": "file://test_gpu.test_bootstrap_Plain_/test_bayes.eval"
         }
     ],
     "test_gpu.test_class_names_multiclass[MultiClassOneVsAll]": [
@@ -308,19 +308,9 @@
             "uri": "file://test_gpu.test_cv_Ordered-inverted_/test.eval"
         }
     ],
-    "test_gpu.test_cv[Ordered]": [
-        {
-            "uri": "file://test_gpu.test_cv_Ordered_/test.eval"
-        }
-    ],
     "test_gpu.test_cv[Plain-inverted]": [
         {
             "uri": "file://test_gpu.test_cv_Plain-inverted_/test.eval"
-        }
-    ],
-    "test_gpu.test_cv[Plain]": [
-        {
-            "uri": "file://test_gpu.test_cv_Plain_/test.eval"
         }
     ],
     "test_gpu.test_cv_for_pairs[Ordered-inverted]": [
@@ -328,19 +318,9 @@
             "uri": "file://test_gpu.test_cv_for_pairs_Ordered-inverted_/test.eval"
         }
     ],
-    "test_gpu.test_cv_for_pairs[Ordered]": [
-        {
-            "uri": "file://test_gpu.test_cv_for_pairs_Ordered_/test.eval"
-        }
-    ],
     "test_gpu.test_cv_for_pairs[Plain-inverted]": [
         {
             "uri": "file://test_gpu.test_cv_for_pairs_Plain-inverted_/test.eval"
-        }
-    ],
-    "test_gpu.test_cv_for_pairs[Plain]": [
-        {
-            "uri": "file://test_gpu.test_cv_for_pairs_Plain_/test.eval"
         }
     ],
     "test_gpu.test_cv_for_query[Ordered-inverted]": [
@@ -348,19 +328,9 @@
             "uri": "file://test_gpu.test_cv_for_query_Ordered-inverted_/test.eval"
         }
     ],
-    "test_gpu.test_cv_for_query[Ordered]": [
-        {
-            "uri": "file://test_gpu.test_cv_for_query_Ordered_/test.eval"
-        }
-    ],
     "test_gpu.test_cv_for_query[Plain-inverted]": [
         {
             "uri": "file://test_gpu.test_cv_for_query_Plain-inverted_/test.eval"
-        }
-    ],
-    "test_gpu.test_cv_for_query[Plain]": [
-        {
-            "uri": "file://test_gpu.test_cv_for_query_Plain_/test.eval"
         }
     ],
     "test_gpu.test_eval_feature[CPU]": [
@@ -1164,20 +1134,52 @@
             "uri": "file://test_gpu.test_fit_multiclass_with_text_features_MultiClassOneVsAll-NaiveBayes-BySense_/test.tsv"
         }
     ],
-    "test_gpu.test_fit_with_per_feature_text_options[Ordered]": [
+    "test_gpu.test_fit_regression_with_text_features[BoW-ByDelimiter]": [
         {
-            "uri": "file://test_gpu.test_fit_with_per_feature_text_options_Ordered_/learn.tsv"
+            "uri": "file://test_gpu.test_fit_regression_with_text_features_BoW-ByDelimiter_/learn.tsv"
         },
         {
-            "uri": "file://test_gpu.test_fit_with_per_feature_text_options_Ordered_/test.tsv"
+            "uri": "file://test_gpu.test_fit_regression_with_text_features_BoW-ByDelimiter_/test.tsv"
         }
     ],
-    "test_gpu.test_fit_with_per_feature_text_options[Plain]": [
+    "test_gpu.test_fit_regression_with_text_features[BoW-BySense]": [
         {
-            "uri": "file://test_gpu.test_fit_with_per_feature_text_options_Plain_/learn.tsv"
+            "uri": "file://test_gpu.test_fit_regression_with_text_features_BoW-BySense_/learn.tsv"
         },
         {
-            "uri": "file://test_gpu.test_fit_with_per_feature_text_options_Plain_/test.tsv"
+            "uri": "file://test_gpu.test_fit_regression_with_text_features_BoW-BySense_/test.tsv"
+        }
+    ],
+    "test_gpu.test_fit_with_per_feature_text_options[Ordered-binclass]": [
+        {
+            "uri": "file://test_gpu.test_fit_with_per_feature_text_options_Ordered-binclass_/learn.tsv"
+        },
+        {
+            "uri": "file://test_gpu.test_fit_with_per_feature_text_options_Ordered-binclass_/test.tsv"
+        }
+    ],
+    "test_gpu.test_fit_with_per_feature_text_options[Ordered-regression]": [
+        {
+            "uri": "file://test_gpu.test_fit_with_per_feature_text_options_Ordered-regression_/learn.tsv"
+        },
+        {
+            "uri": "file://test_gpu.test_fit_with_per_feature_text_options_Ordered-regression_/test.tsv"
+        }
+    ],
+    "test_gpu.test_fit_with_per_feature_text_options[Plain-binclass]": [
+        {
+            "uri": "file://test_gpu.test_fit_with_per_feature_text_options_Plain-binclass_/learn.tsv"
+        },
+        {
+            "uri": "file://test_gpu.test_fit_with_per_feature_text_options_Plain-binclass_/test.tsv"
+        }
+    ],
+    "test_gpu.test_fit_with_per_feature_text_options[Plain-regression]": [
+        {
+            "uri": "file://test_gpu.test_fit_with_per_feature_text_options_Plain-regression_/learn.tsv"
+        },
+        {
+            "uri": "file://test_gpu.test_fit_with_per_feature_text_options_Plain-regression_/test.tsv"
         }
     ],
     "test_gpu.test_fold_len_mult": [
@@ -1225,34 +1227,34 @@
             "uri": "file://test_gpu.test_group_weights_file_quantized/first.eval"
         }
     ],
-    "test_gpu.test_groupwise_with_cat_features[loss_function=PairLogit,eval_metric=PairAccuracy,boosting_type=Plain]": [
+    "test_gpu.test_groupwise_with_cat_features[loss_function=PairLogit,eval_metric_name=PairAccuracy,boosting_type=Plain]": [
         {
-            "uri": "file://test_gpu.test_groupwise_with_cat_features_loss_function=PairLogit_eval_metric=PairAccuracy_boosting_type=Plain_/test_error.tsv"
+            "uri": "file://test_gpu.test_groupwise_with_cat_features_loss_function=PairLogit_eval_metric_name=PairAccuracy_boosting_type=Plain_/test_error.tsv"
         }
     ],
-    "test_gpu.test_groupwise_with_cat_features[loss_function=PairLogitPairwise,eval_metric=NDCG,boosting_type=Plain]": [
+    "test_gpu.test_groupwise_with_cat_features[loss_function=PairLogitPairwise,eval_metric_name=NDCG,boosting_type=Plain]": [
         {
-            "uri": "file://test_gpu.test_groupwise_with_cat_features_loss_function=PairLogitPairwise_eval_metric=NDCG_boosting_type=Plain_/test_error.tsv"
+            "uri": "file://test_gpu.test_groupwise_with_cat_features_loss_function=PairLogitPairwise_eval_metric_name=NDCG_boosting_type=Plain_/test_error.tsv"
         }
     ],
-    "test_gpu.test_groupwise_with_cat_features[loss_function=PairLogitPairwise,eval_metric=PairAccuracy,boosting_type=Plain]": [
+    "test_gpu.test_groupwise_with_cat_features[loss_function=PairLogitPairwise,eval_metric_name=PairAccuracy,boosting_type=Plain]": [
         {
-            "uri": "file://test_gpu.test_groupwise_with_cat_features_loss_function=PairLogitPairwise_eval_metric=PairAccuracy_boosting_type=Plain_/test_error.tsv"
+            "uri": "file://test_gpu.test_groupwise_with_cat_features_loss_function=PairLogitPairwise_eval_metric_name=PairAccuracy_boosting_type=Plain_/test_error.tsv"
         }
     ],
-    "test_gpu.test_groupwise_with_cat_features[loss_function=QueryRMSE,eval_metric=NDCG,boosting_type=Ordered]": [
+    "test_gpu.test_groupwise_with_cat_features[loss_function=QueryRMSE,eval_metric_name=NDCG,boosting_type=Ordered]": [
         {
-            "uri": "file://test_gpu.test_groupwise_with_cat_features_loss_function=QueryRMSE_eval_metric=NDCG_boosting_type=Ordered_/test_error.tsv"
+            "uri": "file://test_gpu.test_groupwise_with_cat_features_loss_function=QueryRMSE_eval_metric_name=NDCG_boosting_type=Ordered_/test_error.tsv"
         }
     ],
-    "test_gpu.test_groupwise_with_cat_features[loss_function=QueryRMSE,eval_metric=NDCG,boosting_type=Plain]": [
+    "test_gpu.test_groupwise_with_cat_features[loss_function=QueryRMSE,eval_metric_name=NDCG,boosting_type=Plain]": [
         {
-            "uri": "file://test_gpu.test_groupwise_with_cat_features_loss_function=QueryRMSE_eval_metric=NDCG_boosting_type=Plain_/test_error.tsv"
+            "uri": "file://test_gpu.test_groupwise_with_cat_features_loss_function=QueryRMSE_eval_metric_name=NDCG_boosting_type=Plain_/test_error.tsv"
         }
     ],
-    "test_gpu.test_groupwise_with_cat_features[loss_function=YetiRankPairwise,eval_metric=NDCG,boosting_type=Plain]": [
+    "test_gpu.test_groupwise_with_cat_features[loss_function=YetiRankPairwise,eval_metric_name=NDCG,boosting_type=Plain]": [
         {
-            "uri": "file://test_gpu.test_groupwise_with_cat_features_loss_function=YetiRankPairwise_eval_metric=NDCG_boosting_type=Plain_/test_error.tsv"
+            "uri": "file://test_gpu.test_groupwise_with_cat_features_loss_function=YetiRankPairwise_eval_metric_name=NDCG_boosting_type=Plain_/test_error.tsv"
         }
     ],
     "test_gpu.test_grow_policies[Logloss-Cosine-Depthwise-Default]": [

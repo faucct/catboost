@@ -5,6 +5,7 @@
 
 #include <util/string/builder.h>
 #include <util/string/cast.h>
+#include <util/generic/fwd.h>
 #include <util/string/split.h>
 #include <util/string/vector.h>
 #include <util/string/strip.h>
@@ -98,6 +99,16 @@ double NCatboostOptions::GetAlpha(const TLossDescription& lossFunctionConfig) {
     return GetAlpha(lossParams);
 }
 
+TVector<double> NCatboostOptions::GetAlphaMultiQuantile(const TMap<TString, TString>& lossParams) {
+    const TString median("0.5");
+    const TStringBuf alphaParam(lossParams.contains("alpha") ? lossParams.at("alpha") : median);
+    TVector<double> alpha;
+    for (const auto& value : StringSplitter(alphaParam).Split(',').SkipEmpty()) {
+        alpha.emplace_back(FromString<double>(value.Token()));
+    }
+    return alpha;
+}
+
 double NCatboostOptions::GetAlphaQueryCrossEntropy(const TMap<TString, TString>& lossParams) {
     return GetParamOrDefault(lossParams, "alpha", 0.95);
 }
@@ -176,8 +187,7 @@ double NCatboostOptions::GetYetiRankDecay(const TLossDescription& lossFunctionCo
     Y_ASSERT(
         lossFunctionConfig.GetLossFunction() == ELossFunction::YetiRank ||
         lossFunctionConfig.GetLossFunction() == ELossFunction::YetiRankPairwise);
-    //TODO(nikitxskv): try to find the best default
-    return GetParamOrDefault(lossFunctionConfig, "decay", 0.99);
+    return GetParamOrDefault(lossFunctionConfig, "decay", 0.85);
 }
 
 double NCatboostOptions::GetLqParam(const TLossDescription& lossFunctionConfig) {
@@ -395,6 +405,7 @@ TString BuildMetricOptionDescription(const NJson::TJsonValue& lossOptions) {
 
 static bool IsFromAucFamily(ELossFunction loss) {
     return loss == ELossFunction::AUC
+        || loss == ELossFunction::QueryAUC
         || loss == ELossFunction::NormalizedGini;
 }
 
@@ -404,7 +415,7 @@ void CheckMetric(const ELossFunction metric, const ELossFunction modelLoss) {
     }
 
     CB_ENSURE(
-        IsMultiRegressionMetric(metric) == IsMultiRegressionMetric(modelLoss),
+        (IsMultiTargetObjective(modelLoss) && IsMultiTargetMetric(metric)) || (!IsMultiTargetObjective(modelLoss) && !IsMultiTargetOnlyMetric(metric)),
         "metric [" + ToString(metric) + "] and loss [" + ToString(modelLoss) + "] are incompatible"
     );
 

@@ -15,30 +15,42 @@
 #include <util/system/types.h>
 
 
+namespace NPar {
+    class TLocalExecutor;
+}
+
+
 NCB::TRawObjectsDataProviderPtr CreateRawObjectsDataProvider(
     NCB::TFeaturesLayoutPtr featuresLayout,
     i64 objectCount,
-    TVector<NCB::TMaybeOwningConstArrayHolder<float>>* columnwiseFloatFeaturesData
-) throw (yexception);
+    TVector<NCB::TMaybeOwningConstArrayHolder<float>>* columnwiseFloatFeaturesData,
+    TVector<NCB::TMaybeOwningConstArrayHolder<i32>>* columnwiseCatFeaturesData,
+    i32 maxUniqCatFeatureValues,
+    NPar::TLocalExecutor* localExecutor
+);
 
 
 class TQuantizedRowAssembler {
 public:
-    TQuantizedRowAssembler(NCB::TQuantizedObjectsDataProviderPtr objectsData) throw (yexception);
+    TQuantizedRowAssembler(NCB::TQuantizedObjectsDataProviderPtr objectsData);
 
     i32 GetObjectBlobSize() const;
 
-    void AssembleObjectBlob(i32 objectIdx, TArrayRef<i8> buffer) throw (yexception);
+    void AssembleObjectBlob(i32 objectIdx, TArrayRef<i8> buffer);
 
 private:
+    NCB::TQuantizedObjectsDataProviderPtr ObjectsData;
+
     size_t BlocksStartOffset = 0;
     size_t BlocksSize = 0;
 
     TVector<NCB::IDynamicBlockIteratorPtr<ui8>> Ui8ColumnIterators;
     TVector<NCB::IDynamicBlockIteratorPtr<ui16>> Ui16ColumnIterators;
+    TVector<NCB::IDynamicBlockIteratorPtr<ui32>> Ui32ColumnIterators;
 
     TVector<TConstArrayRef<ui8>> Ui8ColumnBlocks;
     TVector<TConstArrayRef<ui16>> Ui16ColumnBlocks;
+    TVector<TConstArrayRef<ui32>> Ui32ColumnBlocks;
 };
 
 
@@ -48,9 +60,9 @@ public:
     TDataProviderClosureForJVM(
         NCB::EDatasetVisitorType visitorType,
         const NCB::TDataProviderBuilderOptions& options,
-        bool hasFeatures = true,
-        i32 threadCount = 1
-    ) throw (yexception);
+        bool hasFeatures,
+        NPar::TLocalExecutor* localExecutor
+    );
 
     template <class IVisitor>
     IVisitor* GetVisitor() {
@@ -61,7 +73,7 @@ public:
     %template(GetQuantizedVisitor) GetVisitor<NCB::IQuantizedFeaturesDataVisitor>;
 #endif
 
-    NCB::TDataProviderPtr GetResult() throw (yexception) {
+    NCB::TDataProviderPtr GetResult() {
         return DataProviderBuilder->GetResult();
     }
 

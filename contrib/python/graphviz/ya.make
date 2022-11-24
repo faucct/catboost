@@ -1,22 +1,20 @@
 PY23_LIBRARY()
 
+LICENSE(Service-Py23-Proxy)
 
 
-LICENSE(MIT)
 
-VERSION(0.8.2)
+IF (PYTHON2)
+    PEERDIR(contrib/python/graphviz/py2)
+ELSE()
+    PEERDIR(contrib/python/graphviz/py3)
+ENDIF()
 
 NO_LINT()
 
-PY_SRCS(
-  TOP_LEVEL
-  graphviz/__init__.py
-  graphviz/_compat.py
-  graphviz/backend.py
-  graphviz/dot.py
-  graphviz/files.py
-  graphviz/lang.py
-  graphviz/tools.py
-)
-
 END()
+
+RECURSE(
+    py2
+    py3
+)

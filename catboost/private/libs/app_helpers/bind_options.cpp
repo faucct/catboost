@@ -60,28 +60,6 @@ void CopyIgnoredFeaturesToPoolParams(
     poolLoadParams->Validate(taskType);
 }
 
-inline static TVector<int> ParseIndicesLine(const TStringBuf indicesLine, char delimiter) {
-    TVector<int> result;
-    for (const auto& t : StringSplitter(indicesLine).Split(delimiter)) {
-        const auto s = t.Token();
-        int from = FromString<int>(s.Before('-'));
-        int to = FromString<int>(s.After('-')) + 1;
-        for (int i = from; i < to; ++i) {
-            result.push_back(i);
-        }
-    }
-    return result;
-}
-
-inline static TVector<TVector<int>> ParseIndexSetsLine(const TStringBuf indicesLine) {
-    TVector<TVector<int>> result;
-    for (const auto& t : StringSplitter(indicesLine).Split(';')) {
-        const auto s = t.Token();
-        result.push_back(ParseIndicesLine(s, ','));
-    }
-    return result;
-}
-
 void BindQuantizerPoolLoadParams(NLastGetopt::TOpts* parser, NCatboostOptions::TPoolLoadParams* loadParamsPtr) {
     BindColumnarPoolFormatParams(parser, &(loadParamsPtr->ColumnarPoolFormatParams));
     parser->AddLongOption("input-borders-file", "file with borders")
@@ -204,6 +182,16 @@ void BindPoolLoadParams(NLastGetopt::TOpts* parser, NCatboostOptions::TPoolLoadP
        .NoArgument()
        .Handler0([loadParamsPtr]() {
             loadParamsPtr->HostsAlreadyContainLoadedData = true;
+        });
+
+    parser->AddLongOption("precomputed-data-meta", "file with precomputed data metadata")
+        .RequiredArgument("PATH")
+        .StoreResult(&loadParamsPtr->PrecomputedMetadataFile);
+
+    parser->AddLongOption("pool-metainfo-path", "json file with pool metainfo")
+        .RequiredArgument("[SCHEME://]PATH")
+        .Handler1T<TStringBuf>([loadParamsPtr](const TStringBuf& str) {
+            loadParamsPtr->PoolMetaInfoPath = TPathWithScheme(str);
         });
 }
 
@@ -616,8 +604,7 @@ static void BindFeatureEvalParams(NLastGetopt::TOpts* parserPtr, NJson::TJsonVal
         .RequiredArgument("INDEXES[;INDEXES...]")
         .Help("Evaluate impact of each set of features on test error; each set is a comma-separated list of indices and index intervals, e.g. 4,78-89,312.")
         .Handler1T<TString>([plainJsonPtr](const TString& indicesLine) {
-            auto featuresToEvaluate = ParseIndexSetsLine(indicesLine);
-            NCatboostOptions::TJsonFieldHelper<TVector<TVector<int>>>::Write(featuresToEvaluate, &(*plainJsonPtr)["features_to_evaluate"]);
+            (*plainJsonPtr)["features_to_evaluate"] = indicesLine;
         });
     parser
         .AddLongOption("feature-eval-mode")
@@ -703,6 +690,26 @@ static void BindFeaturesSelectParams(NLastGetopt::TOpts* parserPtr, NJson::TJson
             (*plainJsonPtr)["num_features_to_select"] = numberOfFeaturesToSelect;
         });
     parser
+        .AddLongOption("features-tags-for-select")
+        .RequiredArgument("TAG,TAG,...")
+        .Help("From which features tags perform selection.")
+        .Handler1T<TString>([plainJsonPtr](const TString& tagNamesLine) {
+            for (const auto& tag : StringSplitter(tagNamesLine).Split(',').SkipEmpty()) {
+                (*plainJsonPtr)["features_tags_for_select"].AppendValue(TStringBuf(tag));
+            }
+            CB_ENSURE(
+                !(*plainJsonPtr)["features_tags_for_select"].GetArray().empty(),
+                "Empty features tags for selection list " << tagNamesLine
+            );
+        });
+    parser
+        .AddLongOption("num-features-tags-to-select")
+        .RequiredArgument("int")
+        .Help("How many features tags to select from features-tags-for-select.")
+        .Handler1T<int>([plainJsonPtr](const int numberOfFeaturesTagsToSelect) {
+            (*plainJsonPtr)["num_features_tags_to_select"] = numberOfFeaturesTagsToSelect;
+        });
+    parser
         .AddLongOption("features-selection-steps")
         .RequiredArgument("int")
         .Help("How many steps to perform during feature selection.")
@@ -725,15 +732,24 @@ static void BindFeaturesSelectParams(NLastGetopt::TOpts* parserPtr, NJson::TJson
         });
     parser
         .AddLongOption("features-selection-algorithm")
-        .Help("Which algorithm to use for features selection.")
+        .Help(TString::Join(
+            "Which algorithm to use for features selection.\n",
+            "Should be one of: ", GetEnumAllNames<EFeaturesSelectionAlgorithm>()))
         .Handler1T<EFeaturesSelectionAlgorithm>([plainJsonPtr](const auto algorithm) {
             (*plainJsonPtr)["features_selection_algorithm"] = ToString(algorithm);
         });
     parser
+        .AddLongOption("features-selection-grouping")
+        .Help(TString::Join(
+            "Which grouping to use for features selection.\n",
+            "Should be one of: ", GetEnumAllNames<EFeaturesSelectionGrouping>()))
+        .Handler1T<EFeaturesSelectionGrouping>([plainJsonPtr](const auto grouping) {
+            (*plainJsonPtr)["features_selection_grouping"] = ToString(grouping);
+        });
+    parser
         .AddLongOption("shap-calc-type")
         .DefaultValue("Regular")
-        .Help(TString::Join(
-            "Should be one of: ", GetEnumAllNames<ECalcTypeShapValues>()))
+        .Help("Should be one of: 'Approximate', 'Regular', 'Exact'.")
         .Handler1T<ECalcTypeShapValues>([plainJsonPtr](const ECalcTypeShapValues calcType) {
             (*plainJsonPtr)["shap_calc_type"] = ToString(calcType);
         });
@@ -791,6 +807,28 @@ static void BindTreeParams(NLastGetopt::TOpts* parserPtr, NJson::TJsonValue* pla
         .RequiredArgument("float")
         .Handler1T<float>([plainJsonPtr](float reg) {
             (*plainJsonPtr)["l2_leaf_reg"] = reg;
+        });
+
+    parser.AddLongOption("meta-l2-leaf-exponent", "GPU only. Exponent value for meta L2 score function.")
+        .RequiredArgument("float")
+        .Handler1T<float>([plainJsonPtr](float exponent) {
+            (*plainJsonPtr)["meta_l2_exponent"] = exponent;
+        });
+
+    parser.AddLongOption("meta-l2-leaf-frequency", "GPU only. Frequency value for meta L2 score function.")
+        .RequiredArgument("float")
+        .Handler1T<float>([plainJsonPtr](float frequency) {
+            (*plainJsonPtr)["meta_l2_frequency"] = frequency;
+        });
+
+    parser.AddLongOption(
+        "fixed-binary-splits",
+        "GPU only. Binary features to put at the root of each tree. Colon-separated list of feature names, indices, or inclusive intervals of indices, e.g. 4:78-89:312")
+        .RequiredArgument("INDICES or NAMES")
+        .Handler1T<TString>([plainJsonPtr](const TString& indicesLine) {
+            for (const auto& ignoredFeature : StringSplitter(indicesLine).Split(':')) {
+                (*plainJsonPtr)["fixed_binary_splits"].AppendValue(ignoredFeature.Token());
+            }
         });
 
     parser.AddLongOption("bayesian-matrix-reg", "Regularization value. Should be >= 0")
@@ -1136,19 +1174,33 @@ static void BindTextFeaturesParams(NLastGetopt::TOpts* parserPtr, NJson::TJsonVa
         .Help("Comma separated list of feature calcers descriptions. Description should be written in format "
             "FeatureCalcerType[:optionName=optionValue][:optionName=optionValue]"
         ).Handler1T<TString>([plainJsonPtr](const TString& descriptionLine) {
-            NJson::TJsonValue featureCalcers;
-            featureCalcers.SetType(NJson::EJsonValueType::JSON_ARRAY);
-            for (TStringBuf oneConfig : StringSplitter(descriptionLine).Split(',').SkipEmpty()) {
-                featureCalcers.AppendValue(oneConfig);
-            }
-            (*plainJsonPtr)["feature_calcers"] = featureCalcers;
+            ParseDigitizerDescriptions(descriptionLine, "calcer_type", &(*plainJsonPtr)["feature_calcers"]);
         });
 
     parser.AddLongOption("text-processing")
         .RequiredArgument("{...}")
-        .Help("Text processging json.")
+        .Help("Text processing json.")
         .Handler1T<TString>([plainJsonPtr](const TString& textProcessingLine) {
             NJson::ReadJsonTree(textProcessingLine, &(*plainJsonPtr)["text_processing"]);
+        });
+}
+
+static void BindEmbeddingFeaturesParams(NLastGetopt::TOpts* parserPtr, NJson::TJsonValue* plainJsonPtr) {
+    auto& parser = *parserPtr;
+
+    parser.AddLongOption("embedding-calcers")
+        .RequiredArgument("DESC[,DESC...]")
+        .Help("Comma separated list of feature calcers descriptions. Description should be written in format "
+              "FeatureCalcerType[:optionName=optionValue][:optionName=optionValue]"
+        ).Handler1T<TString>([plainJsonPtr](const TString& descriptionLine) {
+            ParseDigitizerDescriptions(descriptionLine, "calcer_type", &(*plainJsonPtr)["embedding_calcers"]);
+        });
+
+    parser.AddLongOption("embedding-processing")
+        .RequiredArgument("{...}")
+        .Help("Embedding processing json.")
+        .Handler1T<TString>([plainJsonPtr](const TString& embeddingProcessingLine) {
+            NJson::ReadJsonTree(embeddingProcessingLine, &(*plainJsonPtr)["embedding_processing"]);
         });
 }
 
@@ -1223,6 +1275,12 @@ void BindDataProcessingParams(NLastGetopt::TOpts* parserPtr, NJson::TJsonValue* 
             (*plainJsonPtr)["auto_class_weights"] = ToString(classWeightsType);
         })
         .Help(autoClassWeightsHelp);
+
+    parser.AddLongOption("force-unit-auto-pair-weights", "Set weight to 1 for all auto-generated pairs rather than use group weight")
+        .NoArgument()
+        .Handler0([plainJsonPtr]() {
+            (*plainJsonPtr)["force_unit_auto_pair_weights"] = true;
+        });
 
     const auto gpuCatFeatureStorageHelp = TString::Join(
         "GPU only. Must be one of: ",
@@ -1310,8 +1368,8 @@ static void BindSystemParams(NLastGetopt::TOpts* parserPtr, NJson::TJsonValue* p
 
     parser
             .AddLongOption("pinned-memory-size")
-            .RequiredArgument("int")
-            .Help("GPU only. Minimum CPU pinned memory to use")
+            .RequiredArgument("String")
+            .Help("GPU only. Minimum CPU pinned memory to use, e.g. 8gb, 100000, etc. Valid suffixes are tb, gb, mb, kb, b")
             .Handler1T<TString>([plainJsonPtr](const TString& param) {
                 (*plainJsonPtr)["pinned_memory_size"] = param;
             });
@@ -1411,7 +1469,11 @@ static void ParseMetadata(int argc, const char* argv[], NLastGetopt::TOpts* pars
     }
     NLastGetopt::TOptsParseResult parserResult{&parser, argc, argv};
     if (!setModelMetadata) {
-        CB_ENSURE(parserResult.GetFreeArgCount() == 0, "use \"--set-metadata-from-freeargs\" to enable freeargs");
+        CB_ENSURE(
+            parserResult.GetFreeArgCount() == 0,
+            "freearg '" << parserResult.GetFreeArgs()[0] << "' is misplaced, "
+            "or a long option name is preceeded with single -; "
+            "to use freeargs, put --set-metadata-from-freeargs before the 1st freearg.");
     } else {
         auto freeArgs = parserResult.GetFreeArgs();
         auto freeArgCount = freeArgs.size();
@@ -1428,13 +1490,14 @@ void ParseCommandLine(int argc, const char* argv[],
                       TString* paramsPath,
                       NCatboostOptions::TPoolLoadParams* params) {
     auto parser = NLastGetopt::TOpts();
+    parser.ArgPermutation_ = NLastGetopt::EArgPermutation::REQUIRE_ORDER;
     parser.AddHelpOption();
     BindPoolLoadParams(&parser, params);
 
     parser
         .AddLongOption("trigger-core-dump")
         .NoArgument()
-        .Handler0([] { Y_FAIL("Aborting on user request"); })
+        .Handler0([] { CB_ENSURE(false, "Aborting on user request"); })
         .Help("Trigger core dump")
         .Hidden();
 
@@ -1454,6 +1517,8 @@ void ParseCommandLine(int argc, const char* argv[],
     BindCatFeatureParams(&parser, plainJsonPtr);
 
     BindTextFeaturesParams(&parser, plainJsonPtr);
+
+    BindEmbeddingFeaturesParams(&parser, plainJsonPtr);
 
     BindDataProcessingParams(&parser, plainJsonPtr);
 
@@ -1476,6 +1541,7 @@ void ParseModelBasedEvalCommandLine(
     NCatboostOptions::TPoolLoadParams* params
 ) {
     auto parser = NLastGetopt::TOpts();
+    parser.ArgPermutation_ = NLastGetopt::EArgPermutation::REQUIRE_ORDER;
     parser.AddHelpOption();
     BindPoolLoadParams(&parser, params);
 
@@ -1498,6 +1564,8 @@ void ParseModelBasedEvalCommandLine(
 
     BindTextFeaturesParams(&parser, plainJsonPtr);
 
+    BindEmbeddingFeaturesParams(&parser, plainJsonPtr);
+
     BindDataProcessingParams(&parser, plainJsonPtr);
 
     BindBinarizationParams(&parser, plainJsonPtr);
@@ -1518,6 +1586,7 @@ void ParseFeatureEvalCommandLine(
     NCatboostOptions::TPoolLoadParams* params
 ) {
     auto parser = NLastGetopt::TOpts();
+    parser.ArgPermutation_ = NLastGetopt::EArgPermutation::REQUIRE_ORDER;
     parser.AddHelpOption();
     BindPoolLoadParams(&parser, params);
 
@@ -1540,6 +1609,8 @@ void ParseFeatureEvalCommandLine(
 
     BindTextFeaturesParams(&parser, plainJsonPtr);
 
+    BindEmbeddingFeaturesParams(&parser, plainJsonPtr);
+
     BindDataProcessingParams(&parser, plainJsonPtr);
 
     BindBinarizationParams(&parser, plainJsonPtr);
@@ -1560,6 +1631,7 @@ void ParseFeaturesSelectCommandLine(
     NCatboostOptions::TPoolLoadParams* params
 ) {
     auto parser = NLastGetopt::TOpts();
+    parser.ArgPermutation_ = NLastGetopt::EArgPermutation::REQUIRE_ORDER;
     parser.AddHelpOption();
     BindPoolLoadParams(&parser, params);
 
@@ -1581,6 +1653,8 @@ void ParseFeaturesSelectCommandLine(
     BindCatFeatureParams(&parser, plainJsonPtr);
 
     BindTextFeaturesParams(&parser, plainJsonPtr);
+
+    BindEmbeddingFeaturesParams(&parser, plainJsonPtr);
 
     BindDataProcessingParams(&parser, plainJsonPtr);
 

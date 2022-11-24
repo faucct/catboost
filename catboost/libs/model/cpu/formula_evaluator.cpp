@@ -102,7 +102,7 @@ namespace NCB::NModelEvaluation {
                 ExtFeatureLayout = featureLayout;
             }
 
-            size_t GetTreeCount() const {
+            size_t GetTreeCount() const override {
                 return ModelTrees->GetTreeCount();
             }
 
@@ -284,6 +284,7 @@ namespace NCB::NModelEvaluation {
                     floatFeatures,
                     catFeatures,
                     {},
+                    {},
                     treeStart,
                     treeEnd,
                     results,
@@ -291,10 +292,24 @@ namespace NCB::NModelEvaluation {
                 );
             }
 
+            void CalcWithHashedCatAndTextAndEmbeddings(
+                TConstArrayRef<TConstArrayRef<float>> floatFeatures,
+                TConstArrayRef<TConstArrayRef<int>> catFeatures,
+                TConstArrayRef<TConstArrayRef<TStringBuf>> textFeatures,
+                TConstArrayRef<TConstArrayRef<TConstArrayRef<float>>> embeddingFeatures,
+                size_t treeStart,
+                size_t treeEnd,
+                TArrayRef<double> results,
+                const TFeatureLayout* featureInfo
+            ) const override {
+                Calc(floatFeatures, catFeatures, textFeatures, embeddingFeatures, treeStart, treeEnd, results, featureInfo);
+            }
+
             void Calc(
                 TConstArrayRef<TConstArrayRef<float>> floatFeatures,
                 TConstArrayRef<TConstArrayRef<int>> catFeatures,
                 TConstArrayRef<TConstArrayRef<TStringBuf>> textFeatures,
+                TConstArrayRef<TConstArrayRef<TConstArrayRef<float>>> embeddingFeatures,
                 size_t treeStart,
                 size_t treeEnd,
                 TArrayRef<double> results,
@@ -303,8 +318,8 @@ namespace NCB::NModelEvaluation {
                 if (!featureInfo) {
                     featureInfo = ExtFeatureLayout.Get();
                 }
-                ValidateInputFeatures(floatFeatures, catFeatures, textFeatures, featureInfo);
-                const size_t docCount = Max(catFeatures.size(), floatFeatures.size());
+                ValidateInputFeatures(floatFeatures, catFeatures, textFeatures, embeddingFeatures, featureInfo);
+                const size_t docCount = Max(catFeatures.size(), floatFeatures.size(), textFeatures.size(), embeddingFeatures.size());
                 CalcGeneric(
                     *ModelTrees,
                     *ApplyData,
@@ -320,7 +335,9 @@ namespace NCB::NModelEvaluation {
                     [&textFeatures](TFeaturePosition position, size_t index) -> TStringBuf {
                         return textFeatures[index][position.Index];
                     },
-                    TCpuEvaluator::EmbeddingFeatureAccessorStub,
+                    [&embeddingFeatures](TFeaturePosition position, size_t index) -> TConstArrayRef<float> {
+                        return embeddingFeatures[index][position.Index];
+                    },
                     docCount,
                     treeStart,
                     treeEnd,
@@ -361,11 +378,11 @@ namespace NCB::NModelEvaluation {
                 size_t treeEnd,
                 TArrayRef<double> results,
                 const TFeatureLayout* featureInfo
-            ) const {
+            ) const override {
                 if (!featureInfo) {
                     featureInfo = ExtFeatureLayout.Get();
                 }
-                ValidateInputFeatures(floatFeatures, catFeatures, textFeatures, featureInfo);
+                ValidateInputFeatures(floatFeatures, catFeatures, textFeatures, {}, featureInfo);
                 const size_t docCount = Max(catFeatures.size(), floatFeatures.size(), textFeatures.size());
                 CalcGeneric(
                     *ModelTrees,
@@ -401,11 +418,11 @@ namespace NCB::NModelEvaluation {
                 size_t treeEnd,
                 TArrayRef<double> results,
                 const TFeatureLayout* featureInfo
-            ) const {
+            ) const override {
                 if (!featureInfo) {
                     featureInfo = ExtFeatureLayout.Get();
                 }
-                ValidateInputFeatures(floatFeatures, catFeatures, textFeatures, featureInfo);
+                ValidateInputFeatures(floatFeatures, catFeatures, textFeatures, embeddingFeatures, featureInfo);
                 const size_t docCount = Max(catFeatures.size(), floatFeatures.size(), textFeatures.size());
                 CalcGeneric(
                     *ModelTrees,
@@ -445,7 +462,7 @@ namespace NCB::NModelEvaluation {
                 if (!featureInfo) {
                     featureInfo = ExtFeatureLayout.Get();
                 }
-                ValidateInputFeatures<TConstArrayRef<TStringBuf>>({floatFeatures}, {catFeatures}, {}, featureInfo);
+                ValidateInputFeatures<TConstArrayRef<TStringBuf>>({floatFeatures}, {catFeatures}, {}, {}, featureInfo);
                 CalcLeafIndexesGeneric(
                     *ModelTrees,
                     CtrProvider,
@@ -474,7 +491,7 @@ namespace NCB::NModelEvaluation {
                 if (!featureInfo) {
                     featureInfo = ExtFeatureLayout.Get();
                 }
-                ValidateInputFeatures(floatFeatures, catFeatures, {}, featureInfo);
+                ValidateInputFeatures(floatFeatures, catFeatures, {}, {}, featureInfo);
                 const size_t docCount = Max(catFeatures.size(), floatFeatures.size());
                 CB_ENSURE(docCount * (treeEnd - treeStart) == indexes.size(), LabeledOutput(docCount * (treeEnd - treeStart), indexes.size()));
                 CalcLeafIndexesGeneric(
@@ -587,12 +604,22 @@ namespace NCB::NModelEvaluation {
                 }
             }
 
+            void Quantize(
+            TConstArrayRef<TConstArrayRef<float>> features,
+            IQuantizedData* quantizedData
+        ) const override {
+            Y_UNUSED(features);
+            Y_UNUSED(quantizedData);
+            CB_ENSURE(false, "Unimplemented method called, please contact catboost developers via GitHub issue or in support chat");
+        }
+
         private:
             template <typename TCatFeatureContainer = TConstArrayRef<int>>
             void ValidateInputFeatures(
                 TConstArrayRef<TConstArrayRef<float>> floatFeatures,
                 TConstArrayRef<TCatFeatureContainer> catFeatures,
                 TConstArrayRef<TConstArrayRef<TStringBuf>> textFeatures,
+                TConstArrayRef<TConstArrayRef<TConstArrayRef<float>>> embeddingFeatures,
                 const TFeatureLayout* featureInfo
             ) const {
                 if (!floatFeatures.empty() && !catFeatures.empty()) {
@@ -609,6 +636,10 @@ namespace NCB::NModelEvaluation {
                 CB_ENSURE(
                     ApplyData->UsedTextFeaturesCount == 0 || !textFeatures.empty(),
                     "Model has text features but no text features provided"
+                );
+                CB_ENSURE(
+                    ApplyData->UsedEmbeddingFeaturesCount == 0 || !embeddingFeatures.empty(),
+                    "Model has embedding features but no embedding features provided"
                 );
                 size_t minimalSufficientFloatFeatureCount = ApplyData->MinimalSufficientFloatFeaturesVectorSize;
                 if (featureInfo && featureInfo->FloatFeatureIndexes.Defined()) {
@@ -653,6 +684,21 @@ namespace NCB::NModelEvaluation {
                         textFeaturesVec.size() >= minimalSufficientTextFeatureCount,
                         "insufficient text features vector size: " << textFeaturesVec.size()
                         << " expected: " << minimalSufficientTextFeatureCount
+                    );
+                }
+                size_t minimalSufficientEmbeddingFeatureCount = ApplyData->MinimalSufficientEmbeddingFeaturesVectorSize;
+                if (featureInfo && featureInfo->EmbeddingFeatureIndexes.Defined()) {
+                    CB_ENSURE(featureInfo->EmbeddingFeatureIndexes->size() >= minimalSufficientEmbeddingFeatureCount);
+                    minimalSufficientEmbeddingFeatureCount = *MaxElement(
+                        featureInfo->EmbeddingFeatureIndexes->begin(),
+                        featureInfo->EmbeddingFeatureIndexes->end()
+                    );
+                }
+                for (const auto& embeddingFeaturesVec : embeddingFeatures) {
+                    CB_ENSURE(
+                        embeddingFeaturesVec.size() >= minimalSufficientEmbeddingFeatureCount,
+                        "insufficient embedding features vector size: " << embeddingFeaturesVec.size()
+                        << " expected: " << minimalSufficientEmbeddingFeatureCount
                     );
                 }
             }

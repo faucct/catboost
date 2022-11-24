@@ -1,0 +1,38 @@
+{
+  "moduleTemplatePath":"build.gradle.kts.jinja",
+  "renameModuleFile":"build.gradle.kts",
+
+  "rootTemplatePath":"settings.gradle.kts.jinja",
+  "renameRootFile":"settings.gradle.kts",
+
+  "filesToCopy":
+  [
+    "build.gradle.kts",
+    "gradlew",
+    "gradlew.bat",
+    "gradle/wrapper/gradle-wrapper.properties"
+  ],
+  "commands":
+  {
+    "KnownTargets":
+    [
+      "jar"
+    ],
+    "KnownAttrs":
+    [
+    ],
+    "KnownInducedAttrs":
+    [
+      "consumer_classpath"
+    ],
+    "KnownRootAttrs":
+    [
+    ],
+    "testSubdirs":
+    [
+      "/src/test",
+      "/src/test/java"
+    ]
+  }
+}
+

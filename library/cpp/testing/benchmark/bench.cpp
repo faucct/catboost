@@ -73,7 +73,7 @@ namespace {
         const TStringBuf N;
     };
 
-    static inline TString DoFmtTime(double t) {
+    inline TString DoFmtTime(double t) {
         if (t > 0.1) {
             return ToString(t) + " seconds";
         }
@@ -173,7 +173,7 @@ namespace {
         }
     };
 
-    static TLinFunc CalcModel(const TSamples& s) {
+    TLinFunc CalcModel(const TSamples& s) {
         TKahanSLRSolver solver;
 
         for (const auto& p : s) {
@@ -188,7 +188,7 @@ namespace {
         return TLinFunc{c, i};
     }
 
-    static inline TSamples RemoveOutliers(const TSamples& s, double fraction) {
+    inline TSamples RemoveOutliers(const TSamples& s, double fraction) {
         if (s.size() < 20) {
             return s;
         }
@@ -263,7 +263,7 @@ namespace {
 
     using TTests = TIntrusiveListWithAutoDelete<ITestRunner, TDestructor>;
 
-    static inline TTests& Tests() {
+    inline TTests& Tests() {
         return *Singleton<TTests>();
     }
 
@@ -285,7 +285,7 @@ namespace {
         F_JSON /* "json" */
     };
 
-    static TAdaptiveLock STDOUT_LOCK;
+    TAdaptiveLock STDOUT_LOCK;
 
     struct IReporter {
         virtual void Report(TResult&& result) = 0;
@@ -367,6 +367,7 @@ namespace {
                 benchReport["name"] = result.TestName;
                 benchReport["samples"] = result.Samples;
                 benchReport["run_time"] = result.RunTime;
+                benchReport["iterations"] = result.Iterations;
 
                 if (result.CyclesPerIteration) {
                     benchReport["per_iteration_cycles"] = *result.CyclesPerIteration;
@@ -420,7 +421,7 @@ namespace {
         TAdaptiveLock ResultsLock_;
     };
 
-    static THolder<IReporter> MakeReporter(const EOutFormat type) {
+    THolder<IReporter> MakeReporter(const EOutFormat type) {
         switch (type) {
             case F_CONSOLE:
                 return MakeHolder<TConsoleReporter>();
@@ -438,11 +439,11 @@ namespace {
         return MakeHolder<TConsoleReporter>(); // make compiler happy
     }
 
-    static THolder<IReporter> MakeOrderedReporter(const EOutFormat type) {
+    THolder<IReporter> MakeOrderedReporter(const EOutFormat type) {
         return MakeHolder<TOrderedReporter>(MakeReporter(type));
     }
 
-    static void EnumerateTests(TVector<ITestRunner*>& tests) {
+    void EnumerateTests(TVector<ITestRunner*>& tests) {
         for (size_t id : xrange(tests.size())) {
             tests[id]->SequentialId = id;
         }

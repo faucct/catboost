@@ -5,6 +5,7 @@ LIBRARY()
 PEERDIR(
     library/cpp/json
     library/cpp/yson
+    library/cpp/yson/json
 )
 
 SRCS(
@@ -12,3 +13,7 @@ SRCS(
 )
 
 END()
+
+RECURSE_FOR_TESTS(
+    ut
+)

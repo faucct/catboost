@@ -1,0 +1,272 @@
+# File format ($ symbol means the beginning of a line):
+#
+# $ # this message
+# $ # =======================
+# $     # comments (all commentaries should starts with some number of spaces and # symbol)
+# ${action} {license spdx} {license text hash}
+# $BELONGS ./ya/make/file/relative/path/1/ya.make ./ya/make/2/ya.make
+# ${all_file_action} filename
+# $ # user commentaries (many lines)
+# $ generated description - files with this license, license text... (some number of lines that starts with some number of spaces, do not modify)
+# ${action} {license spdx} {license text hash}
+# $BELONGS ./ya/make/file/relative/path/3/ya.make
+# ${all_file_action} filename
+# $    #    user commentaries
+# $ generated description
+# $ ...
+#
+# You can modify action, all_file_action and add commentaries
+# Available actions:
+# keep - keep license in contrib and use in credits
+# skip - skip license
+# remove - remove all files with this license
+# rename - save license text/links into licenses texts file, but not store SPDX into LINCENSE macro. You should store correct license id into devtools.license.spdx.txt file
+#
+# {all file action} records will be generated when license text contains filename that exists on filesystem (in contrib directory)
+# We suppose that that files can contain some license info
+# Available all file actions:
+# FILE_IGNORE - ignore file (do nothing)
+# FILE_INCLUDE - include all file data into licenses text file
+# =======================
+
+KEEP     Public-Domain        657cab1322a8f004d04e037b6739d21a
+BELONGS ya.make
+    License text:
+        ** The author disclaims copyright to this source code.
+    Scancode info:
+        Original SPDX id: LicenseRef-scancode-public-domain
+        Score           : 100.00
+        Match type      : TEXT
+        Links           : http://www.linfo.org/publicdomain.html, https://github.com/nexB/scancode-toolkit/tree/develop/src/licensedcode/data/licenses/public-domain.LICENSE
+    Files with this license:
+        sqlite3.c [176259:176259]
+
+SKIP     LicenseRef-scancode-proprietary-license 8426a059ede424b00bf0246f20b5d31f
+BELONGS ya.make
+    # code
+    License text:
+        ** may not be modified once it is initially set as long as nRef>0.
+    Scancode info:
+        Original SPDX id: LicenseRef-scancode-proprietary-license
+        Score           : 100.00
+        Match type      : REFERENCE
+        Links           : https://github.com/nexB/scancode-toolkit/tree/develop/src/licensedcode/data/licenses/proprietary-license.LICENSE
+    Files with this license:
+        sqlite3.c [66244:66244]
+
+KEEP     blessing             85b808eb169d4456ed67e0cf819b320f
+BELONGS ya.make
+    Note: matched license text is too long. Read it in the source files.
+    Scancode info:
+        Original SPDX id: blessing
+        Score           : 100.00
+        Match type      : TEXT
+        Links           : https://spdx.org/licenses/blessing, https://sqlite.org/src/artifact/df5091916dbb40e6
+    Files with this license:
+        sqlite3.c [30:35]
+        sqlite3.c [90:95]
+        sqlite3.c [140:145]
+        sqlite3.c [311:316]
+        sqlite3.c [10729:10734]
+        sqlite3.c [12571:12576]
+        sqlite3.c [13167:13172]
+        sqlite3.c [13765:13770]
+        sqlite3.c [14725:14730]
+        sqlite3.c [14973:14978]
+        sqlite3.c [15390:15395]
+        sqlite3.c [16026:16031]
+        sqlite3.c [16221:16226]
+        sqlite3.c [16249:16254]
+        sqlite3.c [16512:16517]
+        sqlite3.c [20769:20774]
+        sqlite3.c [20812:20817]
+        sqlite3.c [20974:20979]
+        sqlite3.c [21756:21761]
+        sqlite3.c [22166:22171]
+        sqlite3.c [22184:22189]
+        sqlite3.c [23266:23271]
+        sqlite3.c [24626:24631]
+        sqlite3.c [25073:25078]
+        sqlite3.c [25163:25168]
+        sqlite3.c [25225:25230]
+        sqlite3.c [25519:25524]
+        sqlite3.c [26050:26055]
+        sqlite3.c [26740:26745]
+        sqlite3.c [27324:27329]
+        sqlite3.c [27688:27693]
+        sqlite3.c [27907:27912]
+        sqlite3.c [28304:28309]
+        sqlite3.c [28330:28335]
+        sqlite3.c [28798:28803]
+        sqlite3.c [31035:31040]
+        sqlite3.c [32328:32333]
+        sqlite3.c [32470:32475]
+        sqlite3.c [32747:32752]
+        sqlite3.c [33285:33290]
+        sqlite3.c [35003:35008]
+        sqlite3.c [35481:35486]
+        sqlite3.c [43585:43590]
+        sqlite3.c [49781:49786]
+        sqlite3.c [50662:50667]
+        sqlite3.c [51076:51081]
+        sqlite3.c [51974:51979]
+        sqlite3.c [53264:53269]
+        sqlite3.c [53769:53774]
+        sqlite3.c [53793:53798]
+        sqlite3.c [61668:61673]
+        sqlite3.c [65826:65831]
+        sqlite3.c [65845:65850]
+        sqlite3.c [66872:66877]
+        sqlite3.c [77978:77983]
+        sqlite3.c [78751:78756]
+        sqlite3.c [80723:80728]
+        sqlite3.c [86013:86018]
+        sqlite3.c [88180:88185]
+        sqlite3.c [88375:88380]
+        sqlite3.c [97110:97115]
+        sqlite3.c [97629:97634]
+        sqlite3.c [100398:100403]
+        sqlite3.c [100825:100830]
+        sqlite3.c [101266:101271]
+        sqlite3.c [101526:101531]
+        sqlite3.c [103666:103671]
+        sqlite3.c [110094:110099]
+        sqlite3.c [112374:112379]
+        sqlite3.c [114313:114318]
+        sqlite3.c [114918:114923]
+        sqlite3.c [115189:115194]
+        sqlite3.c [120864:120869]
+        sqlite3.c [121404:121409]
+        sqlite3.c [122396:122401]
+        sqlite3.c [124781:124786]
+        sqlite3.c [126259:126264]
+        sqlite3.c [129401:129406]
+        sqlite3.c [129545:129550]
+        sqlite3.c [129565:129570]
+        sqlite3.c [131146:131151]
+        sqlite3.c [134537:134542]
+        sqlite3.c [135602:135607]
+        sqlite3.c [143502:143507]
+        sqlite3.c [143702:143707]
+        sqlite3.c [145181:145186]
+        sqlite3.c [146529:146534]
+        sqlite3.c [146847:146852]
+        sqlite3.c [147257:147262]
+        sqlite3.c [148604:148609]
+        sqlite3.c [148626:148631]
+        sqlite3.c [152180:152185]
+        sqlite3.c [154034:154039]
+        sqlite3.c [160419:160424]
+        sqlite3.c [163529:163534]
+        sqlite3.c [168989:168994]
+        sqlite3.c [170331:170336]
+        sqlite3.c [170624:170629]
+        sqlite3.c [170645:170650]
+        sqlite3.c [170678:170683]
+        sqlite3.c [170715:170720]
+        sqlite3.c [175586:175591]
+        sqlite3.c [175921:175926]
+        sqlite3.c [176213:176218]
+        sqlite3.c [176425:176430]
+        sqlite3.c [182979:182984]
+        sqlite3.c [183538:183543]
+        sqlite3.c [184834:184839]
+        sqlite3.c [185220:185225]
+        sqlite3.c [185885:185890]
+        sqlite3.c [186408:186413]
+        sqlite3.c [186645:186650]
+        sqlite3.c [187106:187111]
+        sqlite3.c [192923:192928]
+        sqlite3.c [194677:194682]
+        sqlite3.c [195077:195082]
+        sqlite3.c [195463:195468]
+        sqlite3.c [198165:198170]
+        sqlite3.c [202569:202574]
+        sqlite3.c [204568:204573]
+        sqlite3.c [205126:205131]
+        sqlite3.c [205391:205396]
+        sqlite3.c [205482:205487]
+        sqlite3.c [211349:211354]
+        sqlite3.c [212252:212257]
+        sqlite3.c [218490:218495]
+        sqlite3.c [219066:219071]
+        sqlite3.c [219942:219947]
+        sqlite3.c [221419:221424]
+        sqlite3.c [222134:222139]
+        sqlite3.c [222543:222548]
+        sqlite3.c [223509:223514]
+        sqlite3.c [226581:226586]
+        sqlite3.c [227142:227147]
+        sqlite3.c [233962:233967]
+        sqlite3.c [236889:236894]
+        sqlite3.c [238058:238063]
+        sqlite3.c [239474:239479]
+        sqlite3.c [240253:240258]
+        sqlite3.c [240598:240603]
+        sqlite3.c [241396:241401]
+        sqlite3.h [4:9]
+        sqlite3.h [10422:10427]
+        sqlite3.h [12264:12269]
+        sqlite3ext.h [4:9]
+        test_multiplex.c [4:9]
+        test_multiplex.h [4:9]
+
+SKIP     GPL-2.0-only AND GCC-exception-2.0 bc44563fd05423df115b7b82deab1b49
+BELONGS ya.make
+    # not a license
+    License text:
+        ** using [sqlite3_prepare_v3()] or [sqlite3_prepare_v2()]
+        ** or [sqlite3_prepare16_v2()] or [sqlite3_prepare16_v3()] instead
+    Scancode info:
+        Original SPDX id: GPL-2.0-only
+        Score           : 3.64
+        Match type      : NOTICE
+        Links           : http://www.gnu.org/licenses/gpl-2.0.html, http://www.gnu.org/licenses/gpl-2.0.txt, https://spdx.org/licenses/GPL-2.0-only
+    Files with this license:
+        sqlite3.c [5129:5130]
+        sqlite3.h [4822:4823]
+    Scancode info:
+        Original SPDX id: GCC-exception-2.0
+        Score           : 3.64
+        Match type      : NOTICE
+        Links           : https://spdx.org/licenses/GCC-exception-2.0
+    Files with this license:
+        sqlite3.c [5129:5130]
+        sqlite3.h [4822:4823]
+
+KEEP     blessing             c8d1f000b61e9d05df188f11a758a806
+BELONGS ya.make
+    Note: matched license text is too long. Read it in the source files.
+    Scancode info:
+        Original SPDX id: blessing
+        Score           : 100.00
+        Match type      : TEXT
+        Links           : https://spdx.org/licenses/blessing, https://sqlite.org/src/artifact/df5091916dbb40e6
+    Files with this license:
+        LICENSE.md [1:6]
+
+SKIP     LicenseRef-scancode-proprietary-license e505454f6c8a9a7e0fce2275811e8906
+BELONGS ya.make
+    # code
+    License text:
+            sqlite3ErrorMsg(pParse, "table %s may not be modified", pTab->zName);
+    Scancode info:
+        Original SPDX id: LicenseRef-scancode-proprietary-license
+        Score           : 100.00
+        Match type      : REFERENCE
+        Links           : https://github.com/nexB/scancode-toolkit/tree/develop/src/licensedcode/data/licenses/proprietary-license.LICENSE
+    Files with this license:
+        sqlite3.c [121493:121493]
+
+KEEP     Public-Domain        f14cda0580418473b9b9cbd71db6f933
+BELONGS ya.make
+    License text:
+        ** The "printf" code that follows dates from the 1980's.  It is in
+        ** the public domain.
+    Scancode info:
+        Original SPDX id: LicenseRef-scancode-public-domain
+        Score           : 90.00
+        Match type      : TEXT
+        Links           : http://www.linfo.org/publicdomain.html, https://github.com/nexB/scancode-toolkit/tree/develop/src/licensedcode/data/licenses/public-domain.LICENSE
+    Files with this license:
+        sqlite3.c [29641:29642]

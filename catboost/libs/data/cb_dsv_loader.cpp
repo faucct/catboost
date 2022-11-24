@@ -2,9 +2,11 @@
 #include "cb_dsv_loader.h"
 
 #include <catboost/libs/column_description/cd_parser.h>
-#include <catboost/private/libs/data_util/exists_checker.h>
-#include <catboost/private/libs/labels/helpers.h>
 #include <catboost/libs/helpers/mem_usage.h>
+#include <catboost/private/libs/data_util/exists_checker.h>
+#include <catboost/private/libs/data_util/line_data_reader.h>
+#include <catboost/private/libs/labels/helpers.h>
+#include <catboost/private/libs/options/pool_metainfo_options.h>
 
 #include <library/cpp/object_factory/object_factory.h>
 #include <library/cpp/string_utils/csv/csv.h>
@@ -48,6 +50,8 @@ namespace NCB {
                   "TCBDsvDataLoader:TimestampsFilePath does not exist");
         CB_ENSURE(!Args.FeatureNamesPath.Inited() || CheckExists(Args.FeatureNamesPath),
                   "TCBDsvDataLoader:FeatureNamesPath does not exist");
+        CB_ENSURE(!Args.PoolMetaInfoPath.Inited() || CheckExists(Args.PoolMetaInfoPath),
+                  "TCBDsvDataLoader:PoolMetaInfoPath does not exist");
 
         TMaybe<TString> header = LineDataReader->GetHeader();
         TMaybe<TVector<TString>> headerColumns;
@@ -68,14 +72,18 @@ namespace NCB {
             Args.FeatureNamesPath
         );
 
+        const auto poolMetaInfoOptions = NCatboostOptions::LoadPoolMetaInfoOptions(Args.PoolMetaInfoPath);
+
         DataMetaInfo = TDataMetaInfo(
             std::move(columnsDescription),
             targetCount ? ERawTargetType::String : ERawTargetType::None,
             Args.GroupWeightsFilePath.Inited(),
             Args.TimestampsFilePath.Inited(),
             Args.PairsFilePath.Inited(),
+            Args.ForceUnitAutoPairWeights,
             BaselineReader.GetBaselineCount(),
             &featureNames,
+            &poolMetaInfoOptions.Tags.Get(),
             args.CommonArgs.ClassLabels
         );
 
@@ -149,7 +157,7 @@ namespace NCB {
 
         auto& columnsDescription = DataMetaInfo.ColumnsInfo->Columns;
 
-        auto parseBlock = [&](TString& line, int lineIdx) {
+        auto parseLine = [&](TString& line, int lineIdx) {
             const auto& featuresLayout = *DataMetaInfo.FeaturesLayout;
 
             ui32 featureId = 0;
@@ -176,7 +184,7 @@ namespace NCB {
                     TStringBuf token = splitter.Consume();
                     CB_ENSURE(
                         tokenIdx < columnsDescription.size(),
-                        "wrong column count: found more than " << columnsDescription.ysize() << " values"
+                        "wrong column count: found token " << token << " with id more than " << columnsDescription.ysize() << " values:\n" << line
                     );
                     try {
                         switch (columnsDescription[tokenIdx].Type) {
@@ -184,6 +192,23 @@ namespace NCB {
                                 if (!FeatureIgnored[featureId]) {
                                     const ui32 catFeatureIdx = featuresLayout.GetInternalFeatureIdx(featureId);
                                     catFeatures[catFeatureIdx] = visitor->GetCatFeatureValue(lineIdx, featureId, token);
+                                }
+                                ++featureId;
+                                break;
+                            }
+                            case EColumn::HashedCateg: {
+                                if (!FeatureIgnored[featureId]) {
+                                    if (!TryFromString<ui32>(
+                                            token,
+                                            catFeatures[featuresLayout.GetInternalFeatureIdx(featureId)]
+                                        ))
+                                    {
+                                        CB_ENSURE(
+                                            false,
+                                            "Factor " << featureId << "=" << token << " cannot be parsed as hashed categorical value."
+                                            " Try correcting column description file."
+                                        );
+                                    }
                                 }
                                 ++featureId;
                                 break;
@@ -310,7 +335,7 @@ namespace NCB {
             }
         };
 
-        AsyncRowProcessor.ProcessBlock(parseBlock);
+        AsyncRowProcessor.ProcessBlock(parseLine);
 
         if (BaselineReader.Inited()) {
             auto parseBaselineBlock = [&](TString &line, int inBlockIdx) {
@@ -325,6 +350,15 @@ namespace NCB {
 
             AsyncBaselineRowProcessor.ProcessBlock(parseBaselineBlock);
         }
+    }
+
+    int GetDsvColumnCount(const TPathWithScheme& pathWithScheme, const TDsvFormatOptions& format, bool ignoreCsvQuoting) {
+        CB_ENSURE_INTERNAL(pathWithScheme.Scheme == "dsv", "Unsupported scheme " << pathWithScheme.Scheme);
+        TString firstLine;
+        CB_ENSURE(GetLineDataReader(pathWithScheme, format)->ReadLine(&firstLine),
+                  "TCBDsvDataLoader: no data rows in pool");
+        return TVector<TString>(
+            NCsvFormat::CsvSplitter(firstLine, format.Delimiter, ignoreCsvQuoting ? '\0' : '"')).size();
     }
 
     namespace {

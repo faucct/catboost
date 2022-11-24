@@ -5,7 +5,6 @@
 
 #include <util/generic/maybe.h>
 #include <util/string/split.h>
-#include <util/string/join.h>
 #include <util/string/strip.h>
 #include <util/string/type.h>
 #include <util/system/spinlock.h>
@@ -35,7 +34,7 @@ namespace {
         {
         }
 
-        virtual void Lemmatize(TUtf16String* token) const {
+        void Lemmatize(TUtf16String* token) const override {
             with_lock (Lock) {
                 auto it = LemmerCache.Find(*token);
                 if (it != LemmerCache.End()) {
@@ -289,6 +288,7 @@ void NTokenizer::TTokenizer::Tokenize(
     TVector<TString>* tokens,
     TVector<NTokenizer::ETokenType>* tokenTypes
 ) const {
+    Y_ASSERT(tokens);
     tokens->clear();
     if (tokenTypes) {
         tokenTypes->clear();

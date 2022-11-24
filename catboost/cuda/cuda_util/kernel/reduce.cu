@@ -1,9 +1,10 @@
 #include "reduce.cuh"
 #include "fill.cuh"
 #include "kernel_helpers.cuh"
-#include <contrib/libs/cub/cub/device/device_reduce.cuh>
 #include <library/cpp/cuda/wrappers/arch.cuh>
-#include <contrib/libs/cub/cub/device/device_segmented_reduce.cuh>
+
+#include <contrib/libs/nvidia/cub/cub/device/device_reduce.cuh>
+#include <contrib/libs/nvidia/cub/cub/device/device_segmented_reduce.cuh>
 
 
 namespace NKernel {
@@ -249,7 +250,7 @@ namespace NKernel {
                         const ui32 numBlocks = CeilDivide(numSegments, segmentsPerBlock);
 
                         SegmentedReduceWarpPartPerSegmentImpl<T, blockSize, lineSize> << < min(numBlocks, (ui32)TArchProps::MaxBlockCount()), blockSize, 0, stream >> >
-                                                                                                                    (input, beginOffsets, endOffsets, numSegments, output, numBlocks);
+                                (input, beginOffsets, endOffsets, numSegments, output, numBlocks);
 
                     } else if (meanSize <= 4) {
                         const ui32 lineSize = 4;
@@ -265,7 +266,7 @@ namespace NKernel {
                         const ui32 segmentsPerBlock = blockSize / lineSize;
                         const ui32 numBlocks = CeilDivide(numSegments, segmentsPerBlock);
                         SegmentedReduceWarpPartPerSegmentImpl<T, blockSize, lineSize> << < min(numBlocks, (ui32)TArchProps::MaxBlockCount()), blockSize, 0, stream >> >
-                                                                                                                (input, beginOffsets, endOffsets, numSegments, output, numBlocks);
+                                (input, beginOffsets, endOffsets, numSegments, output, numBlocks);
 
                     } else if (meanSize <= 16) {
                         const ui32 lineSize = 16;
@@ -273,7 +274,7 @@ namespace NKernel {
                         const ui32 segmentsPerBlock = blockSize / lineSize;
                         const ui32 numBlocks = CeilDivide(numSegments, segmentsPerBlock);
                         SegmentedReduceWarpPartPerSegmentImpl<T, blockSize, lineSize> << < min(numBlocks, (ui32)TArchProps::MaxBlockCount()), blockSize, 0, stream >> >
-                                                                                                                (input, beginOffsets, endOffsets, numSegments, output, numBlocks);
+                                (input, beginOffsets, endOffsets, numSegments, output, numBlocks);
                     } else if (meanSize <= 256) {
                         const ui32 lineSize = 32;
                         const ui32 blockSize = 256;
@@ -342,6 +343,7 @@ namespace NKernel {
     REDUCE(float)
     REDUCE(ui32)
     REDUCE(int)
+    REDUCE(ui64)
 
 
     template  cudaError_t SegmentedReduce<float>(const float* input, ui32 size, const ui32* offsets, ui32 numSegments, float* output,

@@ -1,5 +1,4 @@
 #include "stat.h"
-#include "neh.h"
 
 #include <util/generic/hash.h>
 #include <util/generic/singleton.h>
@@ -95,7 +94,7 @@ namespace {
         THashMap<TString, TServiceStatRef> SS_;
     };
 
-    static inline TServicesStat* ThrServiceStat() {
+    inline TServicesStat* ThrServiceStat() {
         Y_POD_STATIC_THREAD(TServicesStat*)
         ss;
 

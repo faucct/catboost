@@ -4,11 +4,14 @@
 #include <array>
 
 bool IsSpace(const char* s, size_t len) noexcept {
-    if (len == 0)
+    if (len == 0) {
         return false;
-    for (const char* p = s; p < s + len; ++p)
-        if (!IsAsciiSpace(*p))
+    }
+    for (const char* p = s; p < s + len; ++p) {
+        if (!IsAsciiSpace(*p)) {
             return false;
+        }
+    }
     return true;
 }
 
@@ -18,12 +21,7 @@ static bool IsNumberT(const TStringType& s) noexcept {
         return false;
     }
 
-    for (auto ch : s) {
-        if (!IsAsciiDigit(ch)) {
-            return false;
-        }
-    }
-    return true;
+    return std::all_of(s.begin(), s.end(), IsAsciiDigit<typename TStringType::value_type>);
 }
 
 bool IsNumber(const TStringBuf s) noexcept {
@@ -40,13 +38,7 @@ static bool IsHexNumberT(const TStringType& s) noexcept {
         return false;
     }
 
-    for (auto ch : s) {
-        if (!IsAsciiHex(ch)) {
-            return false;
-        }
-    }
-
-    return true;
+    return std::all_of(s.begin(), s.end(), IsAsciiHex<typename TStringType::value_type>);
 }
 
 bool IsHexNumber(const TStringBuf s) noexcept {

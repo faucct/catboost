@@ -203,11 +203,13 @@ int DoMain(int argc, char** argv) {
         NCB::TPathWithScheme(),
         NCB::TPathWithScheme(),
         NCB::TPathWithScheme(),
+        NCB::TPathWithScheme(),
         columnarPoolFormatParams,
         TVector<ui32>(),
         NCB::EObjectsOrder::Undefined,
         NSystemInfo::CachedNumberOfCpus(),
         true,
+        /*forceUnitAutoPairWeights*/ false,
         /*classNames*/ Nothing()
     );
 
@@ -237,7 +239,7 @@ int DoMain(int argc, char** argv) {
 
 
     options.BlockSize = Min(options.BlockSize, (size_t)dataset->GetObjectCount());
-    Y_ENSURE(options.BlockSize > 0, "Empty pool");
+    CB_ENSURE(options.BlockSize > 0, "Empty pool");
     const size_t docsCount = dataset->GetObjectCount();
     const size_t blockCount = (docsCount) / options.BlockSize;
     const size_t factorsCount = featureUsedInModel.size();

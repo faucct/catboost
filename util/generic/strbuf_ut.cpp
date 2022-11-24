@@ -4,8 +4,6 @@
 
 #include <string_view>
 
-using namespace std::string_view_literals;
-
 Y_UNIT_TEST_SUITE(TStrBufTest) {
     Y_UNIT_TEST(TestConstructorsAndOperators) {
         TStringBuf str("qwerty");
@@ -49,6 +47,16 @@ Y_UNIT_TEST_SUITE(TStrBufTest) {
         UNIT_ASSERT_VALUES_EQUAL(str1, str4);
         static_assert(str1.data() == str4.data());
         static_assert(str1.size() == str4.size());
+    }
+
+    Y_UNIT_TEST(TestConstExprComparison) {
+        static constexpr TStringBuf str1("qwe\0rty"sv);
+        static constexpr TStringBuf str2("qw");
+
+        static_assert(str1 != str2);
+        static_assert(str1 >= str2);
+        static_assert(str1.StartsWith(str2));
+        static_assert(!str1.EndsWith(str2));
     }
 
     Y_UNIT_TEST(TestAfter) {
@@ -334,6 +342,20 @@ Y_UNIT_TEST_SUITE(TStrBufTest) {
         char data[] = "Hello\0word";
         PassByConstReference(data);
     }
+
+    Y_UNIT_TEST(TestTruncate) {
+        TStringBuf s = "123";
+        s.Trunc(5);
+        UNIT_ASSERT_STRINGS_EQUAL(s, "123");
+        s.Trunc(3);
+        UNIT_ASSERT_STRINGS_EQUAL(s, "123");
+        s.Trunc(1);
+        UNIT_ASSERT_STRINGS_EQUAL(s, "1");
+        s.Trunc(0);
+        UNIT_ASSERT_STRINGS_EQUAL(s, "");
+        s.Trunc(0);
+        UNIT_ASSERT_STRINGS_EQUAL(s, "");
+    }
 }
 
 Y_UNIT_TEST_SUITE(TWtrBufTest) {
@@ -357,5 +379,7 @@ Y_UNIT_TEST_SUITE(TWtrBufTest) {
         UNIT_ASSERT_VALUES_EQUAL(str1, str4);
         static_assert(str1.data() == str4.data());
         static_assert(str1.size() == str4.size());
+
+        static_assert(str1 == str2);
     }
 }

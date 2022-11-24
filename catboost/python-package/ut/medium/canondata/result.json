@@ -11,6 +11,9 @@
     "test.test_approximate_shap_feature_importance_multiclass[CPU]": {
         "uri": "file://test.test_approximate_shap_feature_importance_multiclass_CPU_/feature_importance.npy"
     },
+    "test.test_approximate_shap_feature_importance_multirmse[CPU]": {
+        "uri": "file://test.test_approximate_shap_feature_importance_multirmse_CPU_/feature_importance.npy"
+    },
     "test.test_approximate_shap_feature_importance_ranking[CPU]": {
         "uri": "file://test.test_approximate_shap_feature_importance_ranking_CPU_/feature_importance.npy"
     },
@@ -180,6 +183,15 @@
     "test.test_cv_with_not_binarized_target[CPU]": {
         "uri": "file://test.test_cv_with_not_binarized_target_CPU_/catboost_training.json"
     },
+    "test.test_cv_with_text[binclass]": {
+        "uri": "file://test.test_cv_with_text_binclass_/result.csv"
+    },
+    "test.test_cv_with_text[multiclass]": {
+        "uri": "file://test.test_cv_with_text_multiclass_/result.csv"
+    },
+    "test.test_cv_with_text[regression]": {
+        "uri": "file://test.test_cv_with_text_regression_/result.csv"
+    },
     "test.test_dataframe_with_pandas_categorical_columns[cat_features_specified=True]": {
         "uri": "file://test.test_dataframe_with_pandas_categorical_columns_cat_features_specified=True_/predictions.txt"
     },
@@ -217,34 +229,34 @@
     ],
     "test.test_eval_features[CPU-problem=binclass-eval_type=All]": [
         {
-            "uri": "file://test.test_eval_features_CPU-problem=binclass-eval_type=All_/eval_results_Logloss.csv"
+            "uri": "file://test.test_eval_features_CPU-problem=binclass-eval_type=All_/eval_results_AUC.csv"
         },
         {
-            "uri": "file://test.test_eval_features_CPU-problem=binclass-eval_type=All_/eval_results_AUC.csv"
+            "uri": "file://test.test_eval_features_CPU-problem=binclass-eval_type=All_/eval_results_Logloss.csv"
         }
     ],
     "test.test_eval_features[CPU-problem=binclass-eval_type=SeqAddAndAll]": [
         {
-            "uri": "file://test.test_eval_features_CPU-problem=binclass-eval_type=SeqAddAndAll_/eval_results_Logloss.csv"
+            "uri": "file://test.test_eval_features_CPU-problem=binclass-eval_type=SeqAddAndAll_/eval_results_AUC.csv"
         },
         {
-            "uri": "file://test.test_eval_features_CPU-problem=binclass-eval_type=SeqAddAndAll_/eval_results_AUC.csv"
+            "uri": "file://test.test_eval_features_CPU-problem=binclass-eval_type=SeqAddAndAll_/eval_results_Logloss.csv"
         }
     ],
     "test.test_eval_features[CPU-problem=binclass-eval_type=SeqAdd]": [
         {
-            "uri": "file://test.test_eval_features_CPU-problem=binclass-eval_type=SeqAdd_/eval_results_Logloss.csv"
+            "uri": "file://test.test_eval_features_CPU-problem=binclass-eval_type=SeqAdd_/eval_results_AUC.csv"
         },
         {
-            "uri": "file://test.test_eval_features_CPU-problem=binclass-eval_type=SeqAdd_/eval_results_AUC.csv"
+            "uri": "file://test.test_eval_features_CPU-problem=binclass-eval_type=SeqAdd_/eval_results_Logloss.csv"
         }
     ],
     "test.test_eval_features[CPU-problem=binclass-eval_type=SeqRem]": [
         {
-            "uri": "file://test.test_eval_features_CPU-problem=binclass-eval_type=SeqRem_/eval_results_Logloss.csv"
+            "uri": "file://test.test_eval_features_CPU-problem=binclass-eval_type=SeqRem_/eval_results_AUC.csv"
         },
         {
-            "uri": "file://test.test_eval_features_CPU-problem=binclass-eval_type=SeqRem_/eval_results_AUC.csv"
+            "uri": "file://test.test_eval_features_CPU-problem=binclass-eval_type=SeqRem_/eval_results_Logloss.csv"
         }
     ],
     "test.test_eval_features[CPU-problem=multiclass-eval_type=All]": [
@@ -281,34 +293,34 @@
     ],
     "test.test_eval_features[CPU-problem=ranking-eval_type=All]": [
         {
-            "uri": "file://test.test_eval_features_CPU-problem=ranking-eval_type=All_/eval_results_QueryRMSE.csv"
+            "uri": "file://test.test_eval_features_CPU-problem=ranking-eval_type=All_/eval_results_NDCG_type=Base.csv"
         },
         {
-            "uri": "file://test.test_eval_features_CPU-problem=ranking-eval_type=All_/eval_results_NDCG_type=Base.csv"
+            "uri": "file://test.test_eval_features_CPU-problem=ranking-eval_type=All_/eval_results_QueryRMSE.csv"
         }
     ],
     "test.test_eval_features[CPU-problem=ranking-eval_type=SeqAddAndAll]": [
         {
-            "uri": "file://test.test_eval_features_CPU-problem=ranking-eval_type=SeqAddAndAll_/eval_results_QueryRMSE.csv"
+            "uri": "file://test.test_eval_features_CPU-problem=ranking-eval_type=SeqAddAndAll_/eval_results_NDCG_type=Base.csv"
         },
         {
-            "uri": "file://test.test_eval_features_CPU-problem=ranking-eval_type=SeqAddAndAll_/eval_results_NDCG_type=Base.csv"
+            "uri": "file://test.test_eval_features_CPU-problem=ranking-eval_type=SeqAddAndAll_/eval_results_QueryRMSE.csv"
         }
     ],
     "test.test_eval_features[CPU-problem=ranking-eval_type=SeqAdd]": [
         {
-            "uri": "file://test.test_eval_features_CPU-problem=ranking-eval_type=SeqAdd_/eval_results_QueryRMSE.csv"
+            "uri": "file://test.test_eval_features_CPU-problem=ranking-eval_type=SeqAdd_/eval_results_NDCG_type=Base.csv"
         },
         {
-            "uri": "file://test.test_eval_features_CPU-problem=ranking-eval_type=SeqAdd_/eval_results_NDCG_type=Base.csv"
+            "uri": "file://test.test_eval_features_CPU-problem=ranking-eval_type=SeqAdd_/eval_results_QueryRMSE.csv"
         }
     ],
     "test.test_eval_features[CPU-problem=ranking-eval_type=SeqRem]": [
         {
-            "uri": "file://test.test_eval_features_CPU-problem=ranking-eval_type=SeqRem_/eval_results_QueryRMSE.csv"
+            "uri": "file://test.test_eval_features_CPU-problem=ranking-eval_type=SeqRem_/eval_results_NDCG_type=Base.csv"
         },
         {
-            "uri": "file://test.test_eval_features_CPU-problem=ranking-eval_type=SeqRem_/eval_results_NDCG_type=Base.csv"
+            "uri": "file://test.test_eval_features_CPU-problem=ranking-eval_type=SeqRem_/eval_results_QueryRMSE.csv"
         }
     ],
     "test.test_eval_features[CPU-problem=regression-eval_type=All]": [
@@ -334,6 +346,30 @@
     "test.test_eval_features_with_file_header": {
         "uri": "file://test.test_eval_features_with_file_header/eval_results.csv"
     },
+    "test.test_eval_fraction_on_ndarray[with_cat_features=False-estimator_type=classifier]": {
+        "uri": "file://test.test_eval_fraction_on_ndarray_with_cat_features=False-estimator_type=classifier_/predictions.txt"
+    },
+    "test.test_eval_fraction_on_ndarray[with_cat_features=False-estimator_type=regressor]": {
+        "uri": "file://test.test_eval_fraction_on_ndarray_with_cat_features=False-estimator_type=regressor_/predictions.txt"
+    },
+    "test.test_eval_fraction_on_ndarray[with_cat_features=True-estimator_type=classifier]": {
+        "uri": "file://test.test_eval_fraction_on_ndarray_with_cat_features=True-estimator_type=classifier_/predictions.txt"
+    },
+    "test.test_eval_fraction_on_ndarray[with_cat_features=True-estimator_type=regressor]": {
+        "uri": "file://test.test_eval_fraction_on_ndarray_with_cat_features=True-estimator_type=regressor_/predictions.txt"
+    },
+    "test.test_eval_fraction_on_pool[with_cat_features=False-estimator_type=classifier]": {
+        "uri": "file://test.test_eval_fraction_on_pool_with_cat_features=False-estimator_type=classifier_/predictions.txt"
+    },
+    "test.test_eval_fraction_on_pool[with_cat_features=False-estimator_type=regressor]": {
+        "uri": "file://test.test_eval_fraction_on_pool_with_cat_features=False-estimator_type=regressor_/predictions.txt"
+    },
+    "test.test_eval_fraction_on_pool[with_cat_features=True-estimator_type=classifier]": {
+        "uri": "file://test.test_eval_fraction_on_pool_with_cat_features=True-estimator_type=classifier_/predictions.txt"
+    },
+    "test.test_eval_fraction_on_pool[with_cat_features=True-estimator_type=regressor]": {
+        "uri": "file://test.test_eval_fraction_on_pool_with_cat_features=True-estimator_type=regressor_/predictions.txt"
+    },
     "test.test_eval_period_size": [
         {
             "uri": "file://test.test_eval_period_size/eval_metrics_all_trees.txt"
@@ -353,6 +389,9 @@
     },
     "test.test_exact_shap_feature_importance_multiclass[CPU]": {
         "uri": "file://test.test_exact_shap_feature_importance_multiclass_CPU_/feature_importance.npy"
+    },
+    "test.test_exact_shap_feature_importance_multirmse[CPU]": {
+        "uri": "file://test.test_exact_shap_feature_importance_multirmse_CPU_/feature_importance.npy"
     },
     "test.test_exact_shap_feature_importance_ranking[CPU]": {
         "uri": "file://test.test_exact_shap_feature_importance_ranking_CPU_/feature_importance.npy"
@@ -389,6 +428,15 @@
     },
     "test.test_feature_importance_prettified[CPU]": {
         "uri": "file://test.test_feature_importance_prettified_CPU_/feature_importance.txt"
+    },
+    "test.test_feature_importance_sage_all_feature_types": {
+        "uri": "file://test.test_feature_importance_sage_all_feature_types/feature_importance.npy"
+    },
+    "test.test_feature_importance_sage_basic": {
+        "uri": "file://test.test_feature_importance_sage_basic/feature_importance.npy"
+    },
+    "test.test_feature_importance_sage_querywise": {
+        "uri": "file://test.test_feature_importance_sage_querywise/feature_importance.npy"
     },
     "test.test_feature_names_from_model": {
         "uri": "file://test.test_feature_names_from_model/feature_names"
@@ -519,6 +567,9 @@
     "test.test_fit_on_scipy_sparse_spmatrix[features_density=0.8-features_dtype=uint8]": {
         "uri": "file://test.test_fit_on_scipy_sparse_spmatrix_features_density=0.8-features_dtype=uint8_/predictions.txt"
     },
+    "test.test_fit_predict_baseline[CPU]": {
+        "uri": "file://test.test_fit_predict_baseline_CPU_/predictions.npy"
+    },
     "test.test_full_history[CPU]": {
         "uri": "file://test.test_full_history_CPU_/model.bin"
     },
@@ -603,6 +654,15 @@
     "test.test_multiclass_grow_policy[CPU-Lossguide]": {
         "uri": "file://test.test_multiclass_grow_policy_CPU-Lossguide_/learn_error.txt"
     },
+    "test.test_multilabel[Class]": {
+        "uri": "file://test.test_multilabel_Class_/predictions.npy"
+    },
+    "test.test_multilabel[Probability]": {
+        "uri": "file://test.test_multilabel_Probability_/predictions.npy"
+    },
+    "test.test_multilabel[RawFormulaVal]": {
+        "uri": "file://test.test_multilabel_RawFormulaVal_/predictions.npy"
+    },
     "test.test_multiregression[100]": {
         "uri": "file://test.test_multiregression_100_/predictions.txt"
     },
@@ -660,6 +720,12 @@
     "test.test_pmml_export[regression]": {
         "uri": "file://test.test_pmml_export_regression_/model.pmml"
     },
+    "test.test_pool_set_timestamp[CPU]": {
+        "uri": "file://test.test_pool_set_timestamp_CPU_/model.bin"
+    },
+    "test.test_pool_with_timestamp[CPU]": {
+        "uri": "file://test.test_pool_with_timestamp_CPU_/model.bin"
+    },
     "test.test_predict_class[CPU]": {
         "uri": "file://test.test_predict_class_CPU_/predictions.npy"
     },
@@ -692,6 +758,15 @@
     },
     "test.test_priors[CPU]": {
         "uri": "file://test.test_priors_CPU_/model.bin"
+    },
+    "test.test_quantized_pool_cv[adult]": {
+        "uri": "file://test.test_quantized_pool_cv_adult_/result.csv"
+    },
+    "test.test_quantized_pool_cv[higgs]": {
+        "uri": "file://test.test_quantized_pool_cv_higgs_/result.csv"
+    },
+    "test.test_quantized_pool_cv[querywise]": {
+        "uri": "file://test.test_quantized_pool_cv_querywise_/result.csv"
     },
     "test.test_regress_with_per_float_feature_binarization_param[CPU]": {
         "uri": "file://test.test_regress_with_per_float_feature_binarization_param_CPU_/model.bin"
@@ -744,6 +819,24 @@
             "uri": "file://test.test_save_border_file/output_borders_file.dat"
         }
     ],
+    "test.test_select_features_by_multi_feature_tags[CPU-algorithm=RecursiveByLossFunctionChange-train_final_model=False]": {
+        "uri": "file://test.test_select_features_by_multi_feature_tags_CPU-algorithm=RecursiveByLossFunctionChange-train_final_model=False_/summary.json"
+    },
+    "test.test_select_features_by_multi_feature_tags[CPU-algorithm=RecursiveByLossFunctionChange-train_final_model=True]": {
+        "uri": "file://test.test_select_features_by_multi_feature_tags_CPU-algorithm=RecursiveByLossFunctionChange-train_final_model=True_/summary.json"
+    },
+    "test.test_select_features_by_multi_feature_tags[CPU-algorithm=RecursiveByPredictionValuesChange-train_final_model=False]": {
+        "uri": "file://test.test_select_features_by_multi_feature_tags_CPU-algorithm=RecursiveByPredictionValuesChange-train_final_model=False_/summary.json"
+    },
+    "test.test_select_features_by_multi_feature_tags[CPU-algorithm=RecursiveByPredictionValuesChange-train_final_model=True]": {
+        "uri": "file://test.test_select_features_by_multi_feature_tags_CPU-algorithm=RecursiveByPredictionValuesChange-train_final_model=True_/summary.json"
+    },
+    "test.test_select_features_by_multi_feature_tags[CPU-algorithm=RecursiveByShapValues-train_final_model=False]": {
+        "uri": "file://test.test_select_features_by_multi_feature_tags_CPU-algorithm=RecursiveByShapValues-train_final_model=False_/summary.json"
+    },
+    "test.test_select_features_by_multi_feature_tags[CPU-algorithm=RecursiveByShapValues-train_final_model=True]": {
+        "uri": "file://test.test_select_features_by_multi_feature_tags_CPU-algorithm=RecursiveByShapValues-train_final_model=True_/summary.json"
+    },
     "test.test_shap[CPU]": {
         "uri": "file://test.test_shap_CPU_/feature_importance.txt"
     },
@@ -770,6 +863,12 @@
     },
     "test.test_shap_feature_importance_multiclass[CPU-TreeSHAP]": {
         "uri": "file://test.test_shap_feature_importance_multiclass_CPU-TreeSHAP_/feature_importance.npy"
+    },
+    "test.test_shap_feature_importance_multirmse[CPU-IndependentTreeSHAP]": {
+        "uri": "file://test.test_shap_feature_importance_multirmse_CPU-IndependentTreeSHAP_/feature_importance.npy"
+    },
+    "test.test_shap_feature_importance_multirmse[CPU-TreeSHAP]": {
+        "uri": "file://test.test_shap_feature_importance_multirmse_CPU-TreeSHAP_/feature_importance.npy"
     },
     "test.test_shap_feature_importance_ranking[CPU]": {
         "uri": "file://test.test_shap_feature_importance_ranking_CPU_/feature_importance.npy"
@@ -798,6 +897,15 @@
     "test.test_text_processing_dictionary": {
         "uri": "file://test.test_text_processing_dictionary/dictionary.tsv"
     },
+    "test.test_train_with_embedding_features[classification]": {
+        "uri": "file://test.test_train_with_embedding_features_classification_/predictions.txt"
+    },
+    "test.test_train_with_embedding_features[ranking]": {
+        "uri": "file://test.test_train_with_embedding_features_ranking_/predictions.txt"
+    },
+    "test.test_train_with_embedding_features[regression]": {
+        "uri": "file://test.test_train_with_embedding_features_regression_/predictions.txt"
+    },
     "test.test_uncertainty_prediction_types[Logloss-TotalUncertainty-1]": {
         "uri": "file://test.test_uncertainty_prediction_types_Logloss-TotalUncertainty-1_/predictions.txt"
     },
@@ -809,6 +917,18 @@
     },
     "test.test_uncertainty_prediction_types[Logloss-VirtEnsembles-5]": {
         "uri": "file://test.test_uncertainty_prediction_types_Logloss-VirtEnsembles-5_/predictions.txt"
+    },
+    "test.test_uncertainty_prediction_types[MultiClass-TotalUncertainty-1]": {
+        "uri": "file://test.test_uncertainty_prediction_types_MultiClass-TotalUncertainty-1_/predictions.txt"
+    },
+    "test.test_uncertainty_prediction_types[MultiClass-TotalUncertainty-5]": {
+        "uri": "file://test.test_uncertainty_prediction_types_MultiClass-TotalUncertainty-5_/predictions.txt"
+    },
+    "test.test_uncertainty_prediction_types[MultiClass-VirtEnsembles-1]": {
+        "uri": "file://test.test_uncertainty_prediction_types_MultiClass-VirtEnsembles-1_/predictions.txt"
+    },
+    "test.test_uncertainty_prediction_types[MultiClass-VirtEnsembles-5]": {
+        "uri": "file://test.test_uncertainty_prediction_types_MultiClass-VirtEnsembles-5_/predictions.txt"
     },
     "test.test_uncertainty_prediction_types[RMSE-TotalUncertainty-1]": {
         "uri": "file://test.test_uncertainty_prediction_types_RMSE-TotalUncertainty-1_/predictions.txt"
@@ -881,5 +1001,23 @@
     },
     "test.test_zero_baseline[CPU]": {
         "uri": "file://test.test_zero_baseline_CPU_/model.bin"
+    },
+    "test_catboost_utils.test_create_cd_label_and_cat_features": {
+        "uri": "file://test_catboost_utils.test_create_cd_label_and_cat_features/column_description"
+    },
+    "test_catboost_utils.test_create_cd_label_and_feature_names": {
+        "uri": "file://test_catboost_utils.test_create_cd_label_and_feature_names/column_description"
+    },
+    "test_catboost_utils.test_create_cd_label_cat_text_and_emb_features": {
+        "uri": "file://test_catboost_utils.test_create_cd_label_cat_text_and_emb_features/column_description"
+    },
+    "test_catboost_utils.test_create_cd_label_cat_text_and_emb_features_with_names": {
+        "uri": "file://test_catboost_utils.test_create_cd_label_cat_text_and_emb_features_with_names/column_description"
+    },
+    "test_catboost_utils.test_create_cd_label_cat_text_and_emb_features_with_partial_names": {
+        "uri": "file://test_catboost_utils.test_create_cd_label_cat_text_and_emb_features_with_partial_names/column_description"
+    },
+    "test_catboost_utils.test_create_cd_label_only": {
+        "uri": "file://test_catboost_utils.test_create_cd_label_only/column_description"
     }
 }

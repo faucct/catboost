@@ -1,8 +1,13 @@
 LIBRARY()
 
+VERSION(0.6.2)
+
 LICENSE(
-    BSD
+    BSD-2-Clause AND
+    MIT
 )
+
+LICENSE_TEXTS(.yandex_meta/licenses.list.txt)
 
 
 
@@ -33,7 +38,9 @@ SRCS(
 
 NO_COMPILER_WARNINGS()
 
-CFLAGS(-DZSTD_LEGACY_SUPPORT=1)
+CFLAGS(
+    -DZSTD_LEGACY_SUPPORT=1
+)
 
 ADDINCL(
     contrib/libs/zstd06

@@ -2,6 +2,7 @@
 
 #include <util/system/defaults.h>
 #include <util/stream/str.h>
+#include <util/generic/maybe.h>
 #include <util/generic/string.h>
 #include <util/generic/strbuf.h>
 #include <util/generic/typetraits.h>
@@ -160,6 +161,11 @@ inline T FromString(const TString& s) {
     return ::FromString<T>(s.data(), s.size());
 }
 
+template <class T>
+inline T FromString(const std::string& s) {
+    return ::FromString<T>(s.data(), s.size());
+}
+
 template <>
 inline TString FromString<TString>(const TString& s) {
     return s;
@@ -251,6 +257,11 @@ inline bool TryFromString(const TString& s, T& result) {
 }
 
 template <class T>
+inline bool TryFromString(const std::string& s, T& result) {
+    return TryFromString<T>(s.data(), s.size(), result);
+}
+
+template <class T>
 inline bool TryFromString(const TWtringBuf& s, T& result) {
     return TryFromString<T>(s.data(), s.size(), result);
 }
@@ -258,6 +269,36 @@ inline bool TryFromString(const TWtringBuf& s, T& result) {
 template <class T>
 inline bool TryFromString(const TUtf16String& s, T& result) {
     return TryFromString<T>(s.data(), s.size(), result);
+}
+
+template <class T, class TChar>
+inline TMaybe<T> TryFromString(TBasicStringBuf<TChar> s) {
+    TMaybe<T> result{NMaybe::TInPlace{}};
+    if (!TryFromString<T>(s, *result)) {
+        result.Clear();
+    }
+
+    return result;
+}
+
+template <class T, class TChar>
+inline TMaybe<T> TryFromString(const TChar* data) {
+    return TryFromString<T>(TBasicStringBuf<TChar>(data));
+}
+
+template <class T>
+inline TMaybe<T> TryFromString(const TString& s) {
+    return TryFromString<T>(TStringBuf(s));
+}
+
+template <class T>
+inline TMaybe<T> TryFromString(const std::string& s) {
+    return TryFromString<T>(TStringBuf(s));
+}
+
+template <class T>
+inline TMaybe<T> TryFromString(const TUtf16String& s) {
+    return TryFromString<T>(TWtringBuf(s));
 }
 
 template <class T, class TStringType>

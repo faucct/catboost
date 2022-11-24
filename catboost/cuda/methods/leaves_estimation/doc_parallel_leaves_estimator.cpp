@@ -4,17 +4,23 @@ void NCatboostCuda::TDocParallelLeavesEstimator::Estimate(ui32 taskId, NPar::ILo
     auto& task = Tasks.at(taskId);
     auto derCalcer = CreateDerCalcer(task);
 
-    TNewtonLikeWalker newtonLikeWalker(*derCalcer,
-                                       LeavesEstimationConfig.Iterations,
-                                       LeavesEstimationConfig.BacktrackingType);
-
     TVector<float> point;
     TVector<double> weights;
 
     point.resize(task.Model->BinCount() * task.Model->OutputDim());
-    point = newtonLikeWalker.Estimate(point, localExecutor);
+    if (this->LeavesEstimationConfig.LeavesEstimationMethod == ELeavesEstimation::Exact) {
+        point = derCalcer->EstimateExact();
+    } else {
+        TNewtonLikeWalker newtonLikeWalker(*derCalcer,
+                                           LeavesEstimationConfig.Iterations,
+                                           LeavesEstimationConfig.BacktrackingType);
+        point = newtonLikeWalker.Estimate(point, localExecutor);
+    }
+
     derCalcer->WriteWeights(&weights);
-    Y_VERIFY(task.Model->BinCount() == weights.size());
+    CB_ENSURE(
+        task.Model->BinCount() == weights.size(),
+        "Unexpected number of weights " << weights.size() << ", should be " << task.Model->BinCount());
 
     if (LeavesEstimationConfig.MakeZeroAverage) {
         double sum = 0;
@@ -43,8 +49,10 @@ THolder<NCatboostCuda::ILeavesEstimationOracle> NCatboostCuda::TDocParallelLeave
                                 &bins);
     }
 
-    return task.DerCalcerFactory->Create(LeavesEstimationConfig,
+    auto calcer = task.DerCalcerFactory->Create(LeavesEstimationConfig,
                                          task.Cursor.ConstCopyView(),
                                          std::move(bins),
-                                         binCount);
+                                         binCount,
+                                         Random);
+    return std::move(calcer);
 }

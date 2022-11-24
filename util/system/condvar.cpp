@@ -9,12 +9,10 @@
 #include <util/generic/intrlist.h>
 #include <util/generic/yexception.h>
 
-#include <cstdlib>
-
 #if defined(_unix_)
-#include <sys/time.h>
-#include <pthread.h>
-#include <cerrno>
+    #include <sys/time.h>
+    #include <pthread.h>
+    #include <cerrno>
 #endif
 
 namespace {

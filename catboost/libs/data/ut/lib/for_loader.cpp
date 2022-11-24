@@ -6,7 +6,7 @@
 #include <library/cpp/threading/local_executor/local_executor.h>
 
 #include <util/stream/file.h>
-#include <util/system/mktemp.h>
+#include <util/system/tempfile.h>
 
 
 namespace NCB {
@@ -80,10 +80,12 @@ namespace NCB {
                 /*timestampsFilePath*/TPathWithScheme(),
                 readDatasetMainParams.BaselineFilePath, // can be uninited
                 readDatasetMainParams.FeatureNamesFilePath, // can be uninited
+                /*poolMetaInfoFilePath*/TPathWithScheme(),
                 readDatasetMainParams.ColumnarPoolFormatParams,
                 testCase.SrcData.IgnoredFeatures,
                 testCase.SrcData.ObjectsOrder,
                 TDatasetSubset::MakeColumns(),
+                /*forceUnitAutoPairWeights*/ true,
                 /*classLabels*/Nothing(),
                 &localExecutor
             );

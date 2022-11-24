@@ -11,7 +11,9 @@
 #include <catboost/libs/data/order.h>
 #include <catboost/libs/features_selection/select_features.h>
 #include <catboost/libs/features_selection/selection_results.h>
+#include <catboost/libs/train_lib/trainer_env.h>
 
+#include <catboost/private/libs/algo/data.h>
 #include <catboost/private/libs/algo/helpers.h>
 #include <catboost/private/libs/algo/preprocess.cpp>
 #include <catboost/private/libs/app_helpers/bind_options.h>
@@ -20,6 +22,7 @@
 #include <catboost/private/libs/options/load_options.h>
 #include <catboost/private/libs/options/output_file_options.h>
 #include <catboost/private/libs/options/plain_options_helper.h>
+#include <catboost/private/libs/options/pool_metainfo_options.h>
 
 #include <library/cpp/json/json_writer.h>
 
@@ -49,6 +52,7 @@ static void LoadOptions(
     NJson::TJsonValue outputOptionsJson;
     NJson::TJsonValue featuresSelectJsonOptions;
     InitOptions(paramsFile, &catBoostJsonOptions, &outputOptionsJson, &featuresSelectJsonOptions);
+    LoadPoolMetaInfoOptions(poolLoadParams->PoolMetaInfoPath, &catBoostJsonOptions);
 
     ConvertIgnoredFeaturesFromStringToIndices(*poolLoadParams, &catBoostFlatJsonOptions);
     NCatboostOptions::PlainJsonToOptions(catBoostFlatJsonOptions, &catBoostJsonOptions, &outputOptionsJson, &featuresSelectJsonOptions);
@@ -61,6 +65,7 @@ static void LoadOptions(
     catBoostOptions->Load(catBoostJsonOptions);
     outputOptions->Load(outputOptionsJson);
     featuresSelectOptions->Load(featuresSelectJsonOptions);
+    featuresSelectOptions->CheckAndUpdateSteps();
 }
 
 
@@ -73,12 +78,22 @@ static TDataProviders LoadPools(
     TVector<NJson::TJsonValue> classLabels = catBoostOptions.DataProcessingOptions->ClassLabels;
     const auto objectsOrder = hasTimeFlag->Get() ? EObjectsOrder::Ordered : EObjectsOrder::Undefined;
     CB_ENSURE(poolLoadParams.TestSetPaths.size() <= 1, "Features selection mode doesn't support several eval sets.");
+    const bool haveLearnFeaturesInMemory = HaveFeaturesInMemory(
+        catBoostOptions,
+        poolLoadParams.LearnSetPath);
+    TVector<TDatasetSubset> testDatasetSubsets;
+    for (const auto& testSetPath : poolLoadParams.TestSetPaths) {
+        testDatasetSubsets.push_back(
+            TDatasetSubset::MakeColumns(HaveFeaturesInMemory(catBoostOptions, testSetPath)));
+    }
     auto pools = NCB::ReadTrainDatasets(
         catBoostOptions.GetTaskType(),
         poolLoadParams,
         objectsOrder,
         /*readTestData*/true,
-        TDatasetSubset::MakeColumns(),
+        TDatasetSubset::MakeColumns(haveLearnFeaturesInMemory),
+        testDatasetSubsets,
+        catBoostOptions.DataProcessingOptions->ForceUnitAutoPairWeights,
         &classLabels,
         executor,
         /*profile*/nullptr
@@ -138,6 +153,8 @@ int mode_select_features(int argc, const char* argv[]) {
 
     TSetLogging inThisScope(catBoostOptions.LoggingLevel);
 
+    auto trainerEnv = NCB::CreateTrainerEnv(catBoostOptions);
+
     NPar::TLocalExecutor executor;
     executor.RunAdditionalThreads(catBoostOptions.SystemOptions->NumThreads - 1);
 
@@ -149,13 +166,18 @@ int mode_select_features(int argc, const char* argv[]) {
         &executor
     );
 
+    TVector<TEvalResult> evalResults(pools.Test.size());
 
     const TFeaturesSelectionSummary summary = SelectFeatures(
         catBoostOptions,
         outputOptions,
-        poolLoadParams,
+        &poolLoadParams,
         featuresSelectOptions,
+        /*evalMetricDescriptor*/ Nothing(),
         pools,
+        /*dstModel*/ nullptr,
+        /*evalResults*/ GetMutablePointers(evalResults),
+        /*metricsAndTimeHistory*/ nullptr,
         &executor
     );
     SaveSummaryToFile(summary, featuresSelectOptions.ResultPath);

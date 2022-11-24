@@ -11,15 +11,18 @@ PY_SRCS(
 )
 
 PEERDIR(
+    contrib/python/dateutil
+    contrib/python/ipdb
+    contrib/python/py
+    contrib/python/pytest
     library/python/pytest/plugins
     library/python/testing/yatest_common
     library/python/testing/yatest_lib
-    contrib/python/py
-    contrib/python/pytest
-    contrib/python/dateutil
 )
 
-NO_LINT()
+IF (NOT OPENSOURCE)
+    PEERDIR(contrib/tools/gprof2dot)
+ENDIF()
 
 RESOURCE_FILES(
     PREFIX library/python/pytest/
@@ -27,3 +30,7 @@ RESOURCE_FILES(
 )
 
 END()
+
+RECURSE_FOR_TESTS(
+    ut
+)

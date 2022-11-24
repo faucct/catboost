@@ -1,9 +1,11 @@
 #pragma once
 
-#if defined _linux_ && !defined CATBOOST_OPENSOURCE
-#include <contrib/libs/ibdrv/iface.h>
-#endif
 #include "udp_address.h"
+
+#if defined(_linux_) && !defined(CATBOOST_OPENSOURCE)
+#include <contrib/libs/ibdrv/include/infiniband/verbs.h>
+#include <contrib/libs/ibdrv/include/rdma/rdma_cma.h>
+#endif
 
 namespace NNetliba {
 #define CHECK_Z(x)                                                  \
@@ -20,7 +22,7 @@ namespace NNetliba {
     const size_t MAX_INLINE_DATA_SIZE = 16;
     const int MAX_OUTSTANDING_RDMA = 10;
 
-#if defined _linux_ && !defined CATBOOST_OPENSOURCE
+#if defined(_linux_) && !defined(CATBOOST_OPENSOURCE)
     class TIBContext: public TThrRefBase, TNonCopyable {
         ibv_context* Context;
         ibv_pd* ProtDomain;
@@ -209,13 +211,8 @@ namespace NNetliba {
             : IBCtx(ctx)
         {
             TIBContext::TLock ibContext(IBCtx);
-            struct ibv_exp_reg_mr_in mrInfo;
-            //zero unused fields
-            Zero(mrInfo);
-            mrInfo.pd = ibContext.GetProtDomain();
-            mrInfo.length = len;
-            mrInfo.exp_access = IBV_EXP_ACCESS_LOCAL_WRITE | IBV_EXP_ACCESS_REMOTE_WRITE | IBV_EXP_ACCESS_REMOTE_READ | IBV_EXP_ACCESS_ALLOCATE_MR;
-            MR = ibv_exp_reg_mr(&mrInfo);
+            int access = IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ; // TODO: IBV_ACCESS_ALLOCATE_MR
+            MR = ibv_reg_mr(ibContext.GetProtDomain(), 0, len, access);
             Y_ASSERT(MR);
         }
         ui32 GetLKey() const {
@@ -230,8 +227,8 @@ namespace NNetliba {
             return MR ? (char*)MR->addr : nullptr;
         }
         bool IsCovered(const void* data, size_t len) const {
-            size_t dataAddr = (const char*)data - (const char*)nullptr;
-            size_t bufAddr = (const char*)MR->addr - (const char*)nullptr;
+            size_t dataAddr = reinterpret_cast<size_t>(data) / sizeof(char);
+            size_t bufAddr = reinterpret_cast<size_t>(MR->addr) / sizeof(char);
             return (dataAddr >= bufAddr) && (dataAddr + len <= bufAddr + MR->length);
         }
     };
@@ -267,7 +264,7 @@ namespace NNetliba {
             Y_ASSERT(mem->IsCovered(buf, len));
             ibv_recv_wr wr, *bad;
             ibv_sge sg;
-            sg.addr = (const char*)buf - (const char*)nullptr;
+            sg.addr = reinterpret_cast<ui64>(buf) / sizeof(char);
             sg.length = len;
             sg.lkey = mem->GetLKey();
             Zero(wr);
@@ -416,7 +413,7 @@ namespace NNetliba {
         }
         void FillSendAttrs(ibv_send_wr* wr, ibv_sge* sg,
                            TPtrArg<TMemoryRegion> mem, ui64 id, const void* data, size_t len) {
-            ui64 localAddr = (const char*)data - (const char*)nullptr;
+            ui64 localAddr = reinterpret_cast<ui64>(data) / sizeof(char);
             ui32 lKey = 0;
             if (mem) {
                 Y_ASSERT(mem->IsCovered(data, len));

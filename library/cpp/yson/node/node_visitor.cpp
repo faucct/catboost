@@ -30,7 +30,7 @@ void Iterate(const TNode::TMapType& nodeMap, bool sortByKey, Fun action)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-TNodeVisitor::TNodeVisitor(IYsonConsumer* consumer, bool sortMapKeys)
+TNodeVisitor::TNodeVisitor(NYson::IYsonConsumer* consumer, bool sortMapKeys)
     : Consumer_(consumer)
     , SortMapKeys_(sortMapKeys)
 { }
@@ -44,7 +44,7 @@ void TNodeVisitor::VisitAny(const TNode& node)
 {
     if (node.HasAttributes()) {
         Consumer_->OnBeginAttributes();
-        Iterate(node.GetAttributes().AsMap(), SortMapKeys_, [&](const std::pair<TString, TNode>& item) {
+        Iterate(node.GetAttributes().AsMap(), SortMapKeys_, [&](const auto& item) {
             Consumer_->OnKeyedItem(item.first);
             if (item.second.IsUndefined()) {
                 ythrow TNode::TTypeError() << "unable to visit attribute value of type "
@@ -131,7 +131,7 @@ void TNodeVisitor::VisitList(const TNode::TListType& nodeList)
 void TNodeVisitor::VisitMap(const TNode::TMapType& nodeMap)
 {
     Consumer_->OnBeginMap();
-    Iterate(nodeMap, SortMapKeys_, [&](const std::pair<TString, TNode>& item) {
+    Iterate(nodeMap, SortMapKeys_, [&](const auto& item) {
         Consumer_->OnKeyedItem(item.first);
         if (item.second.IsUndefined()) {
             ythrow TNode::TTypeError() << "unable to visit map node child of type "

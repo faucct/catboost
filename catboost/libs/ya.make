@@ -1,9 +1,11 @@
 
 
 RECURSE(
+    calc_metrics
     data
     data/ut
     data/benchmarks_ut
+    dataset_statistics
     eval_result
     features_selection
     fstr

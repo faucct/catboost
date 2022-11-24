@@ -1,5 +1,7 @@
 LIBRARY()
 
+PROVIDES(test_framework)
+
 
 
 PEERDIR(
@@ -24,5 +26,6 @@ END()
 
 RECURSE_FOR_TESTS(
     fat
+    pytests
     ut
 )

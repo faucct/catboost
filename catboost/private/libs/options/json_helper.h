@@ -6,6 +6,10 @@
 #include "unimplemented_aware_option.h"
 #include "loss_description.h"
 
+#include <catboost/libs/column_description/feature_tag.h>
+#include <catboost/libs/helpers/json_helpers.h>
+
+
 #include <library/cpp/json/json_value.h>
 #include <library/cpp/json/json_reader.h>
 
@@ -102,30 +106,42 @@ namespace NCatboostOptions {
         }
     };
 
-    template <class TKey, class T>
-    class TJsonFieldHelper<TMap<TKey, T>, false> {
-    public:
-        static Y_NO_INLINE void Read(const NJson::TJsonValue& src, TMap<TKey, T>* dst) {
-            dst->clear();
-            if (src.IsMap()) {
-                const auto& data = src.GetMapSafe();
-                for (const auto& entry : data) {
-                    TJsonFieldHelper<T>::Read(entry.second, &((*dst)[FromString<TKey>(entry.first)]));
-                }
-            } else {
-                ythrow TCatBoostException() << "Error: wrong json type";
-            }
-        }
+    namespace {
+        // TMap / THashMap
+        template <class TMapping>
+        class TJsonFieldHelperImplForMapping {
+            using TKey = typename TMapping::key_type;
+            using T = typename TMapping::mapped_type;
 
-        static Y_NO_INLINE void Write(const TMap<TKey, T>& src, NJson::TJsonValue* dst) {
-            (*dst) = NJson::TJsonValue(NJson::EJsonValueType::JSON_MAP);
-            for (const auto& entry : src) {
-                NJson::TJsonValue value;
-                TJsonFieldHelper<T>::Write(entry.second, &value);
-                (*dst)[ToString<TKey>(entry.first)] = std::move(value);
+        public:
+            static Y_NO_INLINE void Read(const NJson::TJsonValue& src, TMapping* dst) {
+                dst->clear();
+                if (src.IsMap()) {
+                    const auto& data = src.GetMapSafe();
+                    for (const auto& entry : data) {
+                        TJsonFieldHelper<T>::Read(entry.second, &((*dst)[FromString<TKey>(entry.first)]));
+                    }
+                } else {
+                    ythrow TCatBoostException() << "Error: wrong json type";
+                }
             }
-        }
-    };
+
+            static Y_NO_INLINE void Write(const TMapping& src, NJson::TJsonValue* dst) {
+                (*dst) = NJson::TJsonValue(NJson::EJsonValueType::JSON_MAP);
+                for (const auto& entry : src) {
+                    NJson::TJsonValue value;
+                    TJsonFieldHelper<T>::Write(entry.second, &value);
+                    (*dst)[ToString<TKey>(entry.first)] = std::move(value);
+                }
+            }
+        };
+    }
+
+    template <class TKey, class T>
+    class TJsonFieldHelper<TMap<TKey, T>, false> : public TJsonFieldHelperImplForMapping<TMap<TKey, T>> {};
+
+    template <class TKey, class T>
+    class TJsonFieldHelper<THashMap<TKey, T>, false> : public TJsonFieldHelperImplForMapping<THashMap<TKey, T>> {};
 
     template <>
     class TJsonFieldHelper<NJson::TJsonValue, false> {
@@ -263,6 +279,29 @@ namespace NCatboostOptions {
         }
     };
 
+    template<>
+    class TJsonFieldHelper<NCB::TTagDescription, false> {
+    public:
+        static Y_NO_INLINE void Read(const NJson::TJsonValue& src, NCB::TTagDescription* dst) {
+            if (src.IsMap()) {
+                const auto& data = src.GetMapSafe();
+                TJsonFieldHelper<TVector<ui32>>::Read(data.at("features"), &dst->Features);
+                if (data.find("cost") == data.end()) {
+                    dst->Cost = 1.0;
+                } else {
+                    TJsonFieldHelper<float>::Read(data.at("cost"), &dst->Cost);
+                }
+            } else {
+                ythrow TCatBoostException() << "Error: wrong json type";
+            }
+        }
+
+        static Y_NO_INLINE void Write(const NCB::TTagDescription& src, NJson::TJsonValue* dst) {
+            (*dst) = NJson::TJsonValue(NJson::EJsonValueType::JSON_MAP);
+            TJsonFieldHelper<TVector<ui32>>::Write(src.Features, &(*dst)["features"]);
+        }
+    };
+
     class TUnimplementedAwareOptionsLoader {
     public:
         explicit TUnimplementedAwareOptionsLoader(const NJson::TJsonValue& src)
@@ -378,40 +417,3 @@ namespace NCatboostOptions {
         saver.SaveMany(fields...);
     };
 }
-
-template <typename T>
-void FromJson(const NJson::TJsonValue& value, T* result) {
-    switch (value.GetType()) {
-        case NJson::EJsonValueType::JSON_INTEGER:
-            *result = T(value.GetInteger());
-            break;
-        case NJson::EJsonValueType::JSON_DOUBLE:
-            *result = T(value.GetDouble());
-            break;
-        case NJson::EJsonValueType::JSON_UINTEGER:
-            *result = T(value.GetUInteger());
-            break;
-        case NJson::EJsonValueType::JSON_STRING:
-            *result = FromString<T>(value.GetString());
-            break;
-        default:
-            CB_ENSURE("Incorrect format");
-    }
-}
-
-template <>
-void FromJson(const NJson::TJsonValue& value, TString* result);
-
-template <typename T>
-T FromJson(const NJson::TJsonValue& value) {
-    T result;
-    FromJson(value, &result);
-    return result;
-}
-
-NJson::TJsonValue ReadTJsonValue(TStringBuf paramsJson);
-
-/*
- * Use this function instead of simple ToString(jsonValue) because it saves floating point values with proper precision
- */
-TString WriteTJsonValue(const NJson::TJsonValue& jsonValue);

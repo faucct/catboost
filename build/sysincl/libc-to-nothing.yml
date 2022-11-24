@@ -76,6 +76,7 @@
   - spawn.h
   - stdalign.h
   - stdarg.h
+  - stdatomic.h
   - stdio_ext.h
   - stdnoreturn.h
   - strings.h
@@ -109,7 +110,6 @@
   - sys/procfs.h
   - sys/ptrace.h
   - sys/quota.h
-  - sys/random.h
   - sys/reboot.h
   - sys/resource.h
   - sys/select.h

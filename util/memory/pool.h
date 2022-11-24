@@ -10,6 +10,7 @@
 #include <util/generic/strbuf.h>
 #include <util/generic/singleton.h>
 
+#include <new>
 #include <string>
 #include <utility>
 
@@ -211,10 +212,9 @@ public:
 
     template <typename TChar>
     inline TChar* Append(const TChar* str, size_t len) {
-        TChar* ret = static_cast<TChar*>(Allocate(len * sizeof(TChar)));
+        TChar* ret = AllocateArray<TChar>(len);
 
         std::char_traits<TChar>::copy(ret, str, len);
-
         return ret;
     }
 
@@ -310,6 +310,10 @@ template <typename TPool>
 struct TPoolableBase {
     inline void* operator new(size_t bytes, TPool& pool) {
         return pool.Allocate(bytes);
+    }
+
+    inline void* operator new(size_t bytes, std::align_val_t align, TPool& pool) {
+        return pool.Allocate(bytes, (size_t)align);
     }
 
     inline void operator delete(void*, size_t) noexcept {

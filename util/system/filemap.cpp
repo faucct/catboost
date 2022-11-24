@@ -3,31 +3,30 @@
 #include "defaults.h"
 #include "hi_lo.h"
 
-#include <util/generic/buffer.h>
 #include <util/generic/yexception.h>
 #include <util/generic/singleton.h>
 
 #if defined(_win_)
-#include "winint.h"
+    #include "winint.h"
 #elif defined(_unix_)
-#include <sys/types.h>
-#include <sys/mman.h>
+    #include <sys/types.h>
+    #include <sys/mman.h>
 
-#if !defined(_linux_)
-#ifdef MAP_POPULATE
-#error unlisted platform supporting MAP_POPULATE
-#endif
-#define MAP_POPULATE 0
-#endif
+    #if !defined(_linux_)
+        #ifdef MAP_POPULATE
+            #error unlisted platform supporting MAP_POPULATE
+        #endif
+        #define MAP_POPULATE 0
+    #endif
 
-#if !defined(_freebsd_)
-#ifdef MAP_NOCORE
-#error unlisted platform supporting MAP_NOCORE
-#endif
-#define MAP_NOCORE 0
-#endif
+    #if !defined(_freebsd_)
+        #ifdef MAP_NOCORE
+            #error unlisted platform supporting MAP_NOCORE
+        #endif
+        #define MAP_NOCORE 0
+    #endif
 #else
-#error todo
+    #error todo
 #endif
 
 #include <util/generic/utility.h>
@@ -38,7 +37,7 @@
 #undef GRANULARITY
 
 #ifdef _win_
-#define MAP_FAILED ((void*)(LONG_PTR)-1)
+    #define MAP_FAILED ((void*)(LONG_PTR)-1)
 #endif
 
 namespace {
@@ -71,7 +70,10 @@ namespace {
 #define GRANULARITY (TSysInfo::Instance().GRANULARITY_)
 #define PAGE_SIZE (TSysInfo::Instance().PAGE_SIZE_)
 
-const TString TMemoryMapCommon::UnknownFileName("Unknown_file_name");
+const TString& TMemoryMapCommon::UnknownFileName() {
+    static const TString unknownFileName = "Unknown_file_name";
+    return unknownFileName;
+}
 
 static inline i64 DownToGranularity(i64 offset) noexcept {
     return offset & ~((i64)(GRANULARITY - 1));
@@ -112,12 +114,14 @@ void NPrivate::Precharge(const void* data, size_t dataSize, size_t off, size_t s
         endOff = dataSize;
     }
     size = endOff - off;
-    if (dataSize == 0 || size == 0)
+    if (dataSize == 0 || size == 0) {
         return;
+    }
 
     volatile const char *c = (const char*)data + off, *e = c + size;
-    for (; c < e; c += 512)
+    for (; c < e; c += 512) {
         *c;
+    }
 }
 
 class TMemoryMap::TImpl: public TAtomicRefCount<TImpl> {
@@ -139,10 +143,12 @@ public:
         if (!(Mode_ & oNotGreedy)) {
             PtrStart_ = mmap((caddr_t) nullptr, Length_, ModeToMmapProt(Mode_), ModeToMmapFlags(Mode_), File_.GetHandle(), 0);
 
-            if ((MAP_FAILED == PtrStart_) && Length_)
+            if ((MAP_FAILED == PtrStart_) && Length_) {
                 ythrow yexception() << "Can't map " << (unsigned long)Length_ << " bytes of file '" << DbgName_ << "' at offset 0: " << LastSystemErrorText();
-        } else
+            }
+        } else {
             PtrStart_ = nullptr;
+        }
 #endif
     }
 
@@ -190,9 +196,9 @@ public:
         CreateMapping();
     }
 
-    inline TImpl(const TFile& file, EOpenMode om, TString dbgName)
+    inline TImpl(const TFile& file, EOpenMode om, const TString& dbgName)
         : File_(file)
-        , DbgName_(File_.GetName() ? File_.GetName() : std::move(dbgName))
+        , DbgName_(File_.GetName() ? File_.GetName() : dbgName)
         , Length_(File_.GetLength())
         , Mode_(om)
     {
@@ -231,24 +237,23 @@ public:
 
 #if defined(_win_)
         result.Ptr = MapViewOfFile(Mapping_,
-                                   (Mode_ & oAccessMask) == oRdOnly ? FILE_MAP_READ :
-                                       (Mode_ & oAccessMask) == oCopyOnWr ? FILE_MAP_COPY :
-                                       FILE_MAP_WRITE,
+                                   (Mode_ & oAccessMask) == oRdOnly ? FILE_MAP_READ : (Mode_ & oAccessMask) == oCopyOnWr ? FILE_MAP_COPY
+                                                                                                                         : FILE_MAP_WRITE,
                                    Hi32(base), Lo32(base), size);
 #else
-#if defined(_unix_)
+    #if defined(_unix_)
         if (Mode_ & oNotGreedy) {
-#endif
+    #endif
             result.Ptr = mmap((caddr_t) nullptr, size, ModeToMmapProt(Mode_), ModeToMmapFlags(Mode_), File_.GetHandle(), base);
 
             if (result.Ptr == (char*)(-1)) {
                 result.Ptr = nullptr;
             }
-#if defined(_unix_)
+    #if defined(_unix_)
         } else {
             result.Ptr = PtrStart_ ? static_cast<caddr_t>(PtrStart_) + base : nullptr;
         }
-#endif
+    #endif
 #endif
         if (result.Ptr != nullptr || size == 0) { // allow map of size 0
             result.Size = size;
@@ -269,14 +274,15 @@ public:
     }
 #else
     inline bool Unmap(void* ptr, size_t size) {
-#if defined(_unix_)
-        if (Mode_ & oNotGreedy)
-#endif
+    #if defined(_unix_)
+        if (Mode_ & oNotGreedy) {
+    #endif
             return size == 0 || ::munmap(static_cast<caddr_t>(ptr), size) == 0;
-#if defined(_unix_)
-        else
+    #if defined(_unix_)
+        } else {
             return true;
-#endif
+        }
+    #endif
     }
 #endif
 
@@ -365,13 +371,13 @@ TMemoryMap::TMemoryMap(FILE* f, EOpenMode om, TString dbgName)
 {
 }
 
-TMemoryMap::TMemoryMap(const TFile& file, TString dbgName)
-    : Impl_(new TImpl(file, EOpenModeFlag::oRdOnly, std::move(dbgName)))
+TMemoryMap::TMemoryMap(const TFile& file, const TString& dbgName)
+    : Impl_(new TImpl(file, EOpenModeFlag::oRdOnly, dbgName))
 {
 }
 
-TMemoryMap::TMemoryMap(const TFile& file, EOpenMode om, TString dbgName)
-    : Impl_(new TImpl(file, om, std::move(dbgName)))
+TMemoryMap::TMemoryMap(const TFile& file, EOpenMode om, const TString& dbgName)
+    : Impl_(new TImpl(file, om, dbgName))
 {
 }
 
@@ -454,11 +460,11 @@ TFileMap::TFileMap(const TString& name, i64 length, EOpenMode om)
 }
 
 TFileMap::TFileMap(FILE* f, EOpenMode om, TString dbgName)
-    : Map_(f, om, dbgName)
+    : Map_(f, om, std::move(dbgName))
 {
 }
 
-TFileMap::TFileMap(const TFile& file, EOpenMode om, TString dbgName)
+TFileMap::TFileMap(const TFile& file, EOpenMode om, const TString& dbgName)
     : Map_(file, om, dbgName)
 {
 }
@@ -531,8 +537,9 @@ TMappedAllocation::TMappedAllocation(size_t size, bool shared, void* addr)
     , Mapping_(nullptr)
 #endif
 {
-    if (size != 0)
+    if (size != 0) {
         Alloc(size, addr);
+    }
 }
 
 void* TMappedAllocation::Alloc(size_t size, void* addr) {
@@ -548,14 +555,16 @@ void* TMappedAllocation::Alloc(size_t size, void* addr) {
         Ptr_ = nullptr;
     }
 #endif
-    if (Ptr_ != nullptr)
+    if (Ptr_ != nullptr) {
         Size_ = size;
+    }
     return Ptr_;
 }
 
 void TMappedAllocation::Dealloc() {
-    if (Ptr_ == nullptr)
+    if (Ptr_ == nullptr) {
         return;
+    }
 #if defined(_win_)
     UnmapViewOfFile(Ptr_);
     CloseHandle(Mapping_);
@@ -567,7 +576,7 @@ void TMappedAllocation::Dealloc() {
     Size_ = 0;
 }
 
-void TMappedAllocation::swap(TMappedAllocation& with) {
+void TMappedAllocation::swap(TMappedAllocation& with) noexcept {
     DoSwap(Ptr_, with.Ptr_);
     DoSwap(Size_, with.Size_);
 #if defined(_win_)

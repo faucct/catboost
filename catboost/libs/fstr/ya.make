@@ -7,8 +7,10 @@ SRCS(
     compare_documents.cpp
     feature_str.cpp
     independent_tree_shap.cpp
+    loss_change_fstr.cpp
     output_fstr.cpp
     partial_dependence.cpp
+    sage_values.cpp
     shap_exact.cpp
     shap_interaction_values.cpp
     shap_prepared_trees.cpp
