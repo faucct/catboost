@@ -419,7 +419,6 @@ CATBOOST_API size_t GetModelInfoValueSize(ModelCalcerHandle* modelHandle, const 
  */
 CATBOOST_API const char* GetModelInfoValue(ModelCalcerHandle* modelHandle, const char* keyPtr, size_t keySize);
 
-
 /**
  * Get names of features used in the model.
  * individual strings in featureNames array and featureNames array itself must be deallocated using free() after use.
@@ -427,7 +426,6 @@ CATBOOST_API const char* GetModelInfoValue(ModelCalcerHandle* modelHandle, const
  * @return true on success, false on error
  */
 CATBOOST_API bool GetModelUsedFeaturesNames(ModelCalcerHandle* modelHandle, char*** featureNames, size_t* featureCount);
-
 
 CATBOOST_API char* GetModelNumericFeatureNames(ModelCalcerHandle* modelHandle, char* buffer, size_t size);
 

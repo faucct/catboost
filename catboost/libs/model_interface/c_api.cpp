@@ -892,5 +892,4 @@ CATBOOST_API size_t GetModelCategoricalFeaturePositions(ModelCalcerHandle* model
     return getAllFeaturePositions(FULL_MODEL_PTR(modelHandle)->ModelTrees->GetCatFeatures(), buffer, size);
 }
 
-
 }
