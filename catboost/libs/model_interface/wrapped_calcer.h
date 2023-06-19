@@ -427,11 +427,13 @@ public:
     struct Feature {
         std::string name;
         int position;
+        int flat_position;
     };
 
 private:
     std::vector<Feature> GetFeatures(char* (*get_feature_names)(ModelCalcerHandle*, char*, size_t),
-        size_t (*get_feature_positions)(ModelCalcerHandle*, int*, size_t)) const {
+        size_t (*get_feature_positions)(ModelCalcerHandle*, int*, size_t),
+        size_t (*get_feature_flat_positions)(ModelCalcerHandle*, int*, size_t)) const {
         std::vector<char> buffer(10000, '\0');
         char* end = nullptr;
         while (!(end = get_feature_names(CalcerHolder.get(), buffer.data(), buffer.size()))) {
@@ -450,10 +452,16 @@ private:
             throw std::runtime_error("feature names size differs from feature positions size");
         }
 
+        std::vector<int> flat_positions(names.size());
+        if (get_feature_flat_positions(CalcerHolder.get(), flat_positions.data(), flat_positions.size()) != positions.size()) {
+            throw std::runtime_error("feature names size differs from feature flat positions size");
+        }
+
         std::vector <Feature> result(names.size());
         for (size_t i = 0; i < names.size(); ++i) {
             result[i].name = names[i];
             result[i].position = positions[i];
+            result[i].flat_position = flat_positions[i];
         }
 
         return result;
@@ -461,11 +469,11 @@ private:
 
  public:
     std::vector<Feature> GetNumericFeatures() const {
-        return GetFeatures(GetModelNumericFeatureNames, GetModelNumericFeaturePositions);
+        return GetFeatures(GetModelNumericFeatureNames, GetModelNumericFeaturePositions, GetModelNumericFeatureFlatPositions);
     }
 
     std::vector<Feature> GetCategoricalFeatures() const {
-        return GetFeatures(GetModelCategoricalFeatureNames, GetModelCategoricalFeaturePositions);
+        return GetFeatures(GetModelCategoricalFeatureNames, GetModelCategoricalFeaturePositions, GetModelCategoricalFeatureFlatPositions);
     }
 
 private:

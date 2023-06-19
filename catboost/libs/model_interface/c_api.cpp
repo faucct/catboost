@@ -41,6 +41,19 @@ size_t getAllFeaturePositions(T&& features, int* buffer, size_t size) {
     return features.size();
 }
 
+template <typename T>
+size_t getAllFeatureFlatPositions(T&& features, int* buffer, size_t size) {
+    const int* end = buffer + size;
+    for (auto&& feature : features) {
+        if (buffer == end) {
+            return -1;
+        }
+        *buffer++ = feature.Position.FlatIndex;
+    }
+
+    return features.size();
+}
+
 // See GetModelUsedFeaturesNames
 template <typename T>
 char* getAllFeatureNames(T&& features, char* buffer, size_t size) {
@@ -904,6 +917,14 @@ CATBOOST_API size_t GetModelNumericFeaturePositions(ModelCalcerHandle* modelHand
 
 CATBOOST_API size_t GetModelCategoricalFeaturePositions(ModelCalcerHandle* modelHandle, int* buffer, size_t size) {
     return getAllFeaturePositions(FULL_MODEL_PTR(modelHandle)->ModelTrees->GetCatFeatures(), buffer, size);
+}
+
+CATBOOST_API size_t GetModelNumericFeatureFlatPositions(ModelCalcerHandle* modelHandle, int* buffer, size_t size) {
+    return getAllFeatureFlatPositions(FULL_MODEL_PTR(modelHandle)->ModelTrees->GetFloatFeatures(), buffer, size);
+}
+
+CATBOOST_API size_t GetModelCategoricalFeatureFlatPositions(ModelCalcerHandle* modelHandle, int* buffer, size_t size) {
+    return getAllFeatureFlatPositions(FULL_MODEL_PTR(modelHandle)->ModelTrees->GetCatFeatures(), buffer, size);
 }
 
 }

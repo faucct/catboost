@@ -454,6 +454,10 @@ CATBOOST_API size_t GetModelNumericFeaturePositions(ModelCalcerHandle* modelHand
 
 CATBOOST_API size_t GetModelCategoricalFeaturePositions(ModelCalcerHandle* modelHandle, int* buffer, size_t size);
 
+CATBOOST_API size_t GetModelNumericFeatureFlatPositions(ModelCalcerHandle* modelHandle, int* buffer, size_t size);
+
+CATBOOST_API size_t GetModelCategoricalFeatureFlatPositions(ModelCalcerHandle* modelHandle, int* buffer, size_t size);
+
 #if defined(__cplusplus)
 }
 #endif
